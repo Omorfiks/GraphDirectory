@@ -1,0 +1,40 @@
+[
+  {
+    "id": 0,
+    "name": "src",
+    "type": "folder",
+    "children": [
+      {
+        "id": 1,
+        "name": "components",
+        "type": "folder",
+        "children": [
+          {
+            "id": 2,
+            "name": "FileTree.vue",
+            "type": "file",
+            "children": []
+          },
+          {
+            "id": 3,
+            "name": "TreeNode.vue",
+            "type": "file",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "name": "App.vue",
+        "type": "file",
+        "children": []
+      },
+      {
+        "id": 5,
+        "name": "main.js",
+        "type": "file",
+        "children": []
+      }
+    ]
+  }
+]
