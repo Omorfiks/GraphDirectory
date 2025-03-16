@@ -8,7 +8,7 @@
     <div v-if="notification" class="notification">
       {{ notification }}
     </div>
-    <AddFileForm :flatTreeData="flatTreeData" :refreshTree="fetchData" />
+    <AddFileForm />
     <h3>Файловая система</h3>
     <button @click="updateJson">Обновить JSON</button>
     <ul v-if="treeData">
@@ -16,8 +16,8 @@
         v-for="(node, index) in treeData"
         :key="index"
         :node="node"
-        :is-focused="focusedNode === node.id"
-        :auto-expand="focusedNode === node.id"
+        :is-focused="useFocusStore().focusedNode === node.id"
+        :auto-expand="useFocusStore().focusedNode === node.id"
       />
     </ul>
     <p v-else>Загрузка данных...</p>
@@ -25,13 +25,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import TreeNode from "./TreeNode.vue";
 import axios from "axios";
 import AddFileForm from "../other/AddFileForm.vue"; // Импортируем новый компонент
+import { useFocusStore } from "../../../../stores/focusStore";
 
-// Состояние для дерева
-const treeData = ref(null);
+// Данные дерева из хранилища
+const treeData = computed(() => useFocusStore().treeData);
 
 // Состояние для уведомления
 const notification = ref("");

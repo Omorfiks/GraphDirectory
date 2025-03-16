@@ -12,8 +12,9 @@
   </template>
   
   <script setup>
-  import { ref, defineProps, defineEmits } from "vue";
+  import { defineProps, defineEmits } from "vue";
   import axios from "axios";
+  import { useFocusStore } from "../../../../stores/focusStore";
   
   // Props
   const props = defineProps({
@@ -40,7 +41,7 @@
   
     try {
       await axios.delete(`http://localhost:3000/api/delete-node/${props.currentNodeId}`);
-  
+      useFocusStore().horizontalScroll = 0
       // Уведомляем родителя об удалении узла
       emit("nodeDeleted", props.currentNodeId);
   

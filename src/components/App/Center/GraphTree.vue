@@ -1,16 +1,9 @@
 <template>
   <div class="graph-container">
-    <!-- Стрелка влево -->
-    <button
-      v-if="showLeftArrow"
-      class="arrow left-arrow"
-      @click="scrollNodes(-1)"
-    >
-      &#8592;
-    </button>
+    <ArrowLeft :visibleNodes="useFocusStore().treeData"/>
 
     <!-- SVG-граф -->
-    <svg :width="width" :height="height">
+    <svg :width="width">
       <!-- Рёбра -->
       <line
         v-for="(edge, index) in visibleEdges"
@@ -46,14 +39,7 @@
       </g>
     </svg>
 
-    <!-- Стрелка вправо -->
-    <button
-      v-if="showRightArrow"
-      class="arrow right-arrow"
-      @click="scrollNodes(1)"
-    >
-      &#8594;
-    </button>
+    <ArrowRight :visibleNodes="useFocusStore().treeData"/>
   </div>
 
       <!-- Компонент управления узлами -->
@@ -62,69 +48,79 @@
       :currentNodeId="contextMenuNodeId"
       :showMenu="isMenuVisible"
       :menuPosition="menuPosition"
-      @nodeDeleted="handleNodeDeleted"
       @closeMenu="closeContextMenu"
     />
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useFocusStore } from "../../../../stores/focusStore";
-import axios from "axios";
 import NodeManager from "./NodeManager.vue"; // Импортируем компонент
+import APIfunctions from "../services/APIfunctions";
+import ArrowLeft from "../Center/ArrowLeft.vue";
+import ArrowRight from "../Center/ArrowsRight.vue";
 
-
-// Состояние для контекстного меню
+// // Состояние для контекстного меню
 const isMenuVisible = ref(false);
 const contextMenuNodeId = ref(null);
 const menuPosition = ref({ x: 0, y: 0 });
 
-// Показать контекстное меню
+// // Показать контекстное меню
 const showContextMenu = (event, nodeId) => {
   contextMenuNodeId.value = nodeId;
   menuPosition.value = { x: event.pageX, y: event.pageY };
   isMenuVisible.value = true;
 };
 
-// Закрыть контекстное меню
+// // Закрыть контекстное меню
 const closeContextMenu = () => {
   isMenuVisible.value = false;
   contextMenuNodeId.value = null;
+  refreshTree()
+  scrollNodes(-1)
 };
 
-// Обработка удаления узла
-const handleNodeDeleted = (deletedNodeId) => {
-  // Удаляем узел
-  nodes.value = nodes.value.filter((node) => node.id !== deletedNodeId);
+// // Обработка удаления узла
+// const handleNodeDeleted = async (deletedNodeId) => {
+//   try {
+//     // Удаляем узел из хранилища
+//     focusStore.deleteNodeFromTree(deletedNodeId);
+//     focusStore.deleteNodeFromGraph(deletedNodeId);
 
-  // Удаляем связанные рёбра
-  edges.value = edges.value.filter(
-    (edge) => edge.source !== deletedNodeId && edge.target !== deletedNodeId
-  );
+//     // Переход на предыдущий граф (если возможно)
+//     if (focusStore.horizontalScroll > 0) {
+//       focusStore.horizontalScroll--;
+//     }
 
-  // Пересчитываем позиции узлов
-  recalculateNodePositions();
-};
+//     // Пересчитываем позиции узлов
+//     recalculateNodePositions();
+//   } catch (error) {
+//     console.error("Ошибка при удалении узла:", error);
+//   }
+//     // Уведомляем родителя о необходимости обновления дерева
+//     refreshTree();
+// };
 
 
 const focusStore = useFocusStore();
 const focusedNode = computed(() => focusStore.focusedNode);
 
-// Размеры SVG
+// // Размеры SVG
 const width = ref(window.innerWidth);
-const height = ref(window.innerHeight);
+// const height = ref(window.innerHeight);
 
-// Состояния для узлов и рёбер
+// Состояние для горизонтальной прокрутки
+const store = useFocusStore()
+
+// // Состояния для узлов и рёбер
 const nodes = ref([]);
 const edges = ref([]);
 
-// Состояние для горизонтальной прокрутки
 const horizontalScroll = ref(0); // Текущая позиция прокрутки
 
-// Функция для построения дерева
+// // Функция для построения дерева
 const buildTree = (data, parentId = null, level = 0) => {
   const nodeId = nodes.value.length;
-
   // Расчет координат
   const parent = parentId !== null ? nodes.value[parentId] : null;
   const centerX = parent ? parent.x : width.value / 2;
@@ -150,7 +146,7 @@ const buildTree = (data, parentId = null, level = 0) => {
 
   // Добавляем узел
   nodes.value.push({ id: nodeId, name: data.name, x, y });
-
+  focusStore.setNodes(nodes.value)
   // Добавляем ребро, если есть родительский узел
   if (parentId !== null) {
     edges.value.push({ source: parentId, target: nodeId });
@@ -159,38 +155,13 @@ const buildTree = (data, parentId = null, level = 0) => {
   // Рекурсивно добавляем дочерние узлы
   if (data.children) {
     data.children.forEach((child) => {
+      // APIfunctions.buildTree(child, nodeId, level + 1)
       buildTree(child, nodeId, level + 1);
     });
   }
 };
 
-// Загрузка данных при монтировании компонента
-const fetchData = async () => {
-  try {
-    const response = await axios.get("http://localhost:3000/api/tree-data");
-    const treeData = response.data;
-
-    // Очищаем текущие узлы и рёбра
-    nodes.value = [];
-    edges.value = [];
-
-    // Строим граф для всех корневых элементов
-    treeData.forEach((rootNode) => {
-      buildTree(rootNode, null, 0);
-    });
-
-    // Пересчитываем позиции узлов
-    recalculateNodePositions();
-  } catch (error) {
-    console.error("Ошибка при загрузке данных:", error);
-  }
-};
-
-onMounted(() => {
-  fetchData();
-});
-
-// Выделение узла при наведении
+// // Выделение узла при наведении
 const highlightNode = (nodeId) => {
   focusStore.setFocusedNode(nodeId);
 };
@@ -203,7 +174,7 @@ const clearFocus = () => {
 // Вычисляемые свойства для видимых узлов и рёбер
 const visibleNodes = computed(() => {
   const rootNodes = nodes.value.filter((node) => node.y === 0); // Все корневые узлы
-  const visibleRootNode = rootNodes[horizontalScroll.value]; // Только один видимый корневой узел
+  const visibleRootNode = rootNodes[store.horizontalScroll]; // Только один видимый корневой узел
 
   if (!visibleRootNode) return [];
 
@@ -235,23 +206,16 @@ const visibleEdges = computed(() => {
   });
 });
 
-// Показывать ли стрелки
-const showLeftArrow = computed(() => {
-  return horizontalScroll.value > 0; // Стрелка влево отображается, если можно прокрутить назад
-});
-
-const showRightArrow = computed(() => {
-  const rootNodes = nodes.value.filter((node) => node.y === 0); // Все корневые узлы
-  return horizontalScroll.value < rootNodes.length - 1; // Стрелка вправо отображается, если есть узлы впереди
-});
-
 // Прокрутка узлов
 const scrollNodes = (direction) => {
-  const rootNodes = nodes.value.filter((node) => node.y === 0); // Все корневые узлы
-
-  if (direction === -1 && horizontalScroll.value > 0) {
+  const store = useFocusStore()
+  
+  const rootNodes = store.graphData.nodes.filter((node) => node.y === 0); // Все корневые узлы
+  if (direction === -1 && store.horizontalScroll > 0) {
     horizontalScroll.value--;
-  } else if (direction === 1 && horizontalScroll.value < rootNodes.length - 1) {
+    store.horizontalScroll--
+  } else if (direction === 1 && store.horizontalScroll < rootNodes.length - 1) {
+    store.horizontalScroll++
     horizontalScroll.value++;
   }
 };
@@ -264,7 +228,6 @@ const recalculateNodePositions = () => {
 
     const visibleLevelNodes = levelNodes.filter((levelNode) => visibleNodes.value.includes(levelNode));
     const nodeIndex = visibleLevelNodes.indexOf(node);
-
     if (nodeIndex !== -1) {
       const centerX = parent ? parent.x : width.value / 2;
       const horizontalSpacing = 200; // Расстояние между узлами одного уровня
@@ -288,9 +251,18 @@ const recalculateNodePositions = () => {
   });
 };
 
-// Наблюдатель за horizontalScroll
-watch(horizontalScroll, () => {
-  recalculateNodePositions();
+// Обновление дерева при получении события refreshTree
+const refreshTree = () => {
+  APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions); // Перезагружаем данные
+};
+
+// // Наблюдатель за focusStore.horizontalScroll
+// watch(horizontalScroll, () => {
+//   recalculateNodePositions();
+// });
+
+onMounted(() => {  
+  APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions);
 });
 </script>
 

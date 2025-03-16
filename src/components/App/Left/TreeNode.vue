@@ -57,6 +57,22 @@ const focusedNode = computed(() => focusStore.focusedNode);
 // Вычисляемое свойство для проверки фокуса
 const isNodeFocused = computed(() => props.node.id === focusedNode.value);
 
+// Переключение состояния папки (развернуть/свернуть)
+const toggleExpand = () => {
+  if (props.node.type === "folder") {
+    isExpanded.value = !isExpanded.value;
+  }
+};
+
+// Обработчик клика по узлу
+const handleClick = () => {
+  if (props.node.type === "folder") {
+    toggleExpand();
+  }
+  // Устанавливаем фокус на текущий узел
+  focusStore.setFocusedNode(props.node.id);
+};
+
 // Автоматическое разворачивание при автофокусе
 watch(
   () => props.autoExpand,
@@ -77,29 +93,24 @@ watch(
   }
 );
 
-// Переключение состояния папки (развернуть/свернуть)
-const toggleExpand = () => {
-  if (props.node.type === "folder") {
-    isExpanded.value = !isExpanded.value;
-  }
-};
-
-// Обработчик клика по узлу
-const handleClick = () => {
-  if (props.node.type === "folder") {
-    toggleExpand();
-  }
-  // Устанавливаем фокус на текущий узел
-  focusStore.setFocusedNode(props.node.id);
-};
+// Добавляем слежение за изменениями в данных узла
+watch(
+  () => focusStore.treeData,
+  (newTreeData) => {
+    // Если данные дерева изменились, обновляем состояние
+    if (newTreeData) {
+      console.log("Дерево обновлено:", newTreeData);
+    }
+  },
+  { deep: true } // Глубокое наблюдение
+);
 
 // Добавляем слежение за изменениями в данных узла
 watch(
   () => props.node.children,
   (newChildren) => {
     if (newChildren && newChildren.length === 0) {
-      // Если у узла больше нет дочерних элементов, сворачиваем его
-      isExpanded.value = false;
+      isExpanded.value = false; // Сворачиваем узел, если детей больше нет
     }
   },
   { deep: true } // Глубокое наблюдение за массивом children
