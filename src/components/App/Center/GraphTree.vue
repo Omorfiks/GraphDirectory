@@ -22,7 +22,7 @@
         :transform="`translate(${node.x}, ${node.y})`"
         @mouseenter="highlightNode(node.id)"
         @mouseleave="clearFocus"
-        @contextmenu.prevent="showContextMenu($event, node.id)"
+        @contextmenu.prevent="showContextMenu($event, node.name)"
       >
         <!-- Контур (обводка) -->
         <circle
@@ -53,7 +53,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useFocusStore } from "../../../../stores/focusStore";
 import NodeManager from "./NodeManager.vue"; // Импортируем компонент
 import APIfunctions from "../services/APIfunctions";
@@ -66,40 +66,56 @@ const contextMenuNodeId = ref(null);
 const menuPosition = ref({ x: 0, y: 0 });
 
 // // Показать контекстное меню
-const showContextMenu = (event, nodeId) => {
-  contextMenuNodeId.value = nodeId;
+const showContextMenu = (event, nodeName) => {
+  // Находим узел в treeData по его имени
+  const nodeInTree = focusStore.findTreeNodeByName(nodeName);
+  if (!nodeInTree) {
+    console.error("Узел с именем", nodeName, "не найден в treeData.");
+    return;
+  }  
+  // Устанавливаем ID узла из treeData
+  contextMenuNodeId.value = nodeInTree.id;
+
+  // Логируем ID узла
+  console.log("ID узла из treeData:", nodeInTree.id);
+
+  // Устанавливаем позицию меню
   menuPosition.value = { x: event.pageX, y: event.pageY };
   isMenuVisible.value = true;
 };
 
-// // Закрыть контекстное меню
-const closeContextMenu = () => {
-  isMenuVisible.value = false;
-  contextMenuNodeId.value = null;
-  refreshTree()
-  scrollNodes(-1)
+
+// Обновление дерева при получении события refreshTree
+const refreshTree = () => {
+  APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions); // Перезагружаем данные
 };
 
-// // Обработка удаления узла
-// const handleNodeDeleted = async (deletedNodeId) => {
-//   try {
-//     // Удаляем узел из хранилища
-//     focusStore.deleteNodeFromTree(deletedNodeId);
-//     focusStore.deleteNodeFromGraph(deletedNodeId);
-
-//     // Переход на предыдущий граф (если возможно)
-//     if (focusStore.horizontalScroll > 0) {
-//       focusStore.horizontalScroll--;
-//     }
-
-//     // Пересчитываем позиции узлов
-//     recalculateNodePositions();
-//   } catch (error) {
-//     console.error("Ошибка при удалении узла:", error);
-//   }
-//     // Уведомляем родителя о необходимости обновления дерева
-//     refreshTree();
+// // Закрыть контекстное меню
+// const closeContextMenu = () => {
+//   isMenuVisible.value = false;
+//   contextMenuNodeId.value = null;
+//   refreshTree()
+//   // scrollNodes(-1)
 // };
+
+
+// Закрыть контекстное меню
+const closeContextMenu = () => {
+  isMenuVisible.value = false;
+  const deletedNodeId = contextMenuNodeId.value; // Сохраняем ID удаляемого узла
+  contextMenuNodeId.value = null;
+
+  // Проверяем, является ли удаляемый узел текущим корневым видимым узлом
+  const rootNodes = nodes.value.filter((node) => node.y === 0); // Все корневые узлы
+  const currentVisibleRootNode = rootNodes[store.horizontalScroll]; // Текущий видимый корневой узел
+
+  if (currentVisibleRootNode && currentVisibleRootNode.id === deletedNodeId) {
+    scrollNodes(-1); // Прокручиваем назад, если удалили текущий корневой узел
+  }
+
+  refreshTree(); // Обновляем дерево
+};
+
 
 
 const focusStore = useFocusStore();
@@ -116,7 +132,7 @@ const store = useFocusStore()
 const nodes = ref([]);
 const edges = ref([]);
 
-const horizontalScroll = ref(0); // Текущая позиция прокрутки
+// const horizontalScroll = ref(0); // Текущая позиция прокрутки
 
 // // Функция для построения дерева
 const buildTree = (data, parentId = null, level = 0) => {
@@ -212,11 +228,11 @@ const scrollNodes = (direction) => {
   
   const rootNodes = store.graphData.nodes.filter((node) => node.y === 0); // Все корневые узлы
   if (direction === -1 && store.horizontalScroll > 0) {
-    horizontalScroll.value--;
+    // horizontalScroll.value--;
     store.horizontalScroll--
   } else if (direction === 1 && store.horizontalScroll < rootNodes.length - 1) {
     store.horizontalScroll++
-    horizontalScroll.value++;
+    // horizontalScroll.value++;
   }
 };
 
@@ -225,7 +241,6 @@ const recalculateNodePositions = () => {
   nodes.value.forEach((node) => {
     const parent = nodes.value.find((n) => n.id === edges.value.find((e) => e.target === node.id)?.source);
     const levelNodes = nodes.value.filter((n) => n.y === node.y);
-
     const visibleLevelNodes = levelNodes.filter((levelNode) => visibleNodes.value.includes(levelNode));
     const nodeIndex = visibleLevelNodes.indexOf(node);
     if (nodeIndex !== -1) {
@@ -251,18 +266,10 @@ const recalculateNodePositions = () => {
   });
 };
 
-// Обновление дерева при получении события refreshTree
-const refreshTree = () => {
-  APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions); // Перезагружаем данные
-};
-
-// // Наблюдатель за focusStore.horizontalScroll
-// watch(horizontalScroll, () => {
-//   recalculateNodePositions();
-// });
-
-onMounted(() => {  
-  APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions);
+onMounted(async () => {  
+  const test = store.graphData.nodes
+  console.log("Узлы графа после загрузки:", test);
+  await APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions);
 });
 </script>
 

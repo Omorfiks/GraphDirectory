@@ -38,10 +38,11 @@
   // Удаление текущего узла
   const deleteNode = async () => {
     if (!props.currentNodeId) return;
+  console.log(props);
   
     try {
       await axios.delete(`http://localhost:3000/api/delete-node/${props.currentNodeId}`);
-      useFocusStore().horizontalScroll = 0
+      // useFocusStore().horizontalScroll = 0
       // Уведомляем родителя об удалении узла
       emit("nodeDeleted", props.currentNodeId);
   
@@ -50,6 +51,8 @@
   
       // Уведомляем родителя о необходимости обновления дерева
       emit("refreshTree");
+      // Обновляем выпадающий список
+      useFocusStore().refreshDropdown();
     } catch (error) {
       console.error("Ошибка при удалении узла:", error);
     }

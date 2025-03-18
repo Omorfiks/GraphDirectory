@@ -3,12 +3,19 @@ import Grid from "./components/Grid.vue";
 import Auth from "./components/AuthScreen/Auth.vue";
 import Tree from "./components/App/Left/Tree.vue";
 import GraphTree from "./components/App/Center/GraphTree.vue";
+import { useFocusStore } from "../stores/focusStore";
+import { computed } from "vue";
+
+// Вычисляемое свойство для ключа
+const graphKey = computed(() => {
+  return `${useFocusStore().horizontalScroll}-${useFocusStore().refreshGraph}`;
+});
 </script>
 
 <template>
   <Grid/>
   <!-- <Auth/> -->
-  <GraphTree/>
+  <GraphTree :key="graphKey"/>
   <Tree/>
 </template>
 

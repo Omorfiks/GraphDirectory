@@ -8,10 +8,10 @@
     <div v-if="notification" class="notification">
       {{ notification }}
     </div>
-    <AddFileForm />
+    <AddFileForm v-if="!useFocusStore().isLoading && treeData"/>
     <h3>Файловая система</h3>
     <button @click="updateJson">Обновить JSON</button>
-    <ul v-if="treeData">
+    <ul v-if="!useFocusStore().isLoading && treeData">
       <TreeNode
         v-for="(node, index) in treeData"
         :key="index"
@@ -51,7 +51,6 @@ const fetchData = async () => {
   try {
     const response = await axios.get("http://localhost:3000/api/tree-data");
     treeData.value = response.data; // Обновляем данные дерева
-    console.log("Данные успешно загружены:", treeData.value);
   } catch (error) {
     console.error("Ошибка при загрузке данных:", error);
   }
@@ -112,8 +111,8 @@ const stopDrag = () => {
 };
 
 // Загрузка данных при монтировании компонента
-onMounted(() => {
-  fetchData();
+onMounted(async () => {
+  await fetchData();
 });
 </script>
 

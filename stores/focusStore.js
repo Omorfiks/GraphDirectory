@@ -2,6 +2,11 @@ import { defineStore } from "pinia";
 
 export const useFocusStore = defineStore("focus", {
   state: () => ({
+    dropdownRefreshKey: 0, // Новое поле для обновления выпадающего списка
+    /**
+     * Флаг загрузки данных
+     */
+    isLoading: true,
     /**
      * ID текущего выделенного узла
      */
@@ -39,6 +44,10 @@ export const useFocusStore = defineStore("focus", {
      * Высота окна
      */
     height: window.innerHeight,
+    /**
+     * Переменная для обновления графа
+     */
+    refreshGraph: 0,
   }),
   getters: {
 
@@ -74,17 +83,29 @@ export const useFocusStore = defineStore("focus", {
       return allVisibleNodes;
     },
     /**
-     * Рекурсивная функция для получения всех дочерних узлов
-     * * @param {number} nodeId - Только один видимый корневой узел
+     * Рекурсивная функция для получения всех дочерних узлов.
+     * @param {number} nodeId - ID узла, для которого нужно получить поддерево.
+     * @param {Set<number>} visited - Множество для отслеживания посещенных узлов.
+     * @returns {Array} - Массив всех дочерних узлов, включая сам узел.
      */
-    getSubtreeNodes(nodeId) {
+    getSubtreeNodes(nodeId, visited = new Set()) {
+      // Если узел уже посещен, прекращаем рекурсию
+      if (visited.has(nodeId)) return [];
+      visited.add(nodeId);
+
+      // Получаем текущий узел
       const result = [this.graphData.nodes[nodeId]];
+
+      // Находим дочерние узлы через рёбра
       const children = this.graphData.edges
         .filter((edge) => edge.source === nodeId)
         .map((edge) => this.graphData.nodes[edge.target]);
+
+      // Рекурсивно добавляем дочерние узлы
       children.forEach((child) => {
-        result.push(...this.getSubtreeNodes(child.id));
+        result.push(...this.getSubtreeNodes(child.id, visited));
       });
+
       return result;
     },
     /**
@@ -291,6 +312,55 @@ export const useFocusStore = defineStore("focus", {
           }
         }
       });
-    }
+    },
+    /**
+     * Рекурсивно собирает все узлы с указанным типом.
+     * @param {Array} nodes - Массив узлов для проверки.
+     * @param {string} type - Тип узла (например, "folder").
+     * @returns {Array} - Массив найденных узлов.
+     */
+    findNodesByType(nodes, type) {
+      const result = [];
+
+      const traverse = (nodeList) => {
+        nodeList.forEach((node) => {
+          if (node.type === type) {
+            result.push(node);
+          }
+          if (node.children && node.children.length > 0) {
+            traverse(node.children); // Рекурсивно проверяем дочерние узлы
+          }
+        });
+      };
+
+      traverse(nodes); // Начинаем обход с корневых узлов
+      return result;
+    },
+    /**
+     * Находит узел в дереве по его имени.
+     * @param {string} nodeName - Имя узла, который нужно найти.
+     * @returns {Object|null} - Найденный узел или null, если узел не найден.
+     */
+    findTreeNodeByName(nodeName) {
+      const findNode = (nodes) => {
+        for (const node of nodes) {
+          if (node.name === nodeName) {
+            return node;
+          }
+          if (node.children) {
+            const found = findNode(node.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return findNode(this.treeData);
+    },
+    /**
+     * Увеличивает значение dropdownRefreshKey для принудительного обновления выпадающего списка.
+     */
+    refreshDropdown() {
+      this.dropdownRefreshKey += 1;
+    },
   },
 });

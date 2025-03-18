@@ -6,9 +6,9 @@
       <option value="file">Файл</option>
       <option value="folder">Папка</option>
     </select>
-    <select v-model="newFileParentId">
+    <select v-model="newFileParentId" :key="dropdownKey">
       <option :value="null">Корень</option>
-      <option v-for="node in rootNodes" :key="node.id" :value="node.id">
+      <option v-for="node in test" :key="node.id" :value="node.id">
         {{ node.name }}
       </option>
     </select>
@@ -17,8 +17,14 @@
 </template>
   
 <script setup>
+import { ref, computed } from "vue";
 import APIfunctions from "../services/APIfunctions";
 import { useFocusStore } from "../../../../stores/focusStore";
+
+// Вычисляемый ключ для выпадающего списка
+const dropdownKey = computed(() => {
+  return useFocusStore().dropdownRefreshKey;
+});
 
 // Локальные реактивные переменные для формы
 const newFileName = APIfunctions.newFileName;
@@ -26,7 +32,10 @@ const newFileType = APIfunctions.newFileType;
 const newFileParentId = APIfunctions.newFileParentId;
 
 const store = useFocusStore()
-const rootNodes = store.graphData.visibleNodes
+
+const test = computed(() => {
+  return store.findNodesByType(store.treeData, "folder");
+});
 
 // Метод для добавления нового файла
 const addNewFile = async () => {
@@ -35,14 +44,6 @@ const addNewFile = async () => {
     return;
   }
   try {
-    // const refreshTree = () => {
-    //   APIfunctions.fetchData(
-    //     useFocusStore().graphData.nodes, 
-    //     useFocusStore().graphData.edges, 
-    //     useFocusStore().buildTree, 
-    //     useFocusStore().recalculateNodePositions); // Перезагружаем данные  
-    // };
-
     // Вызываем метод update из APIfunctions
     await APIfunctions.update();
     await APIfunctions.fetchData(
@@ -50,25 +51,22 @@ const addNewFile = async () => {
       useFocusStore().graphData.edges, 
       useFocusStore().buildTree, 
       useFocusStore().recalculateNodePositions);
-        
-    // useFocusStore().graphData.nodes, 
-    //   useFocusStore().graphData.edges, 
-    //   useFocusStore().buildTree(), 
-    //   useFocusStore().recalculateNodePositions()
-    
+      useFocusStore().refreshGraph++
+      // Обновляем выпадающий список
+      useFocusStore().refreshDropdown();
     // Прокрутка узлов
-    const scrollNodes = (direction) => {
-      const store = useFocusStore()
-      const rootNodes = store.graphData.nodes.filter((node) => node.y === 0); // Все корневые узлы
-      store.horizontalScroll++
-      console.log(store.horizontalScroll);
+    // const scrollNodes = (direction) => {
+    //   const store = useFocusStore()
+    //   const rootNodes = store.graphData.nodes.filter((node) => node.y === 0); // Все корневые узлы
+    //   store.horizontalScroll++
+    //   console.log(store.horizontalScroll);
       
-      if (direction === -1 && store.horizontalScroll > 0) {
-        store.horizontalScroll--;
-      } else if (direction === 1 && store.horizontalScroll < rootNodes.length - 1) {
-        store.horizontalScroll++;
-      }
-    };
+    //   if (direction === -1 && store.horizontalScroll > 0) {
+    //     store.horizontalScroll--;
+    //   } else if (direction === 1 && store.horizontalScroll < rootNodes.length - 1) {
+    //     store.horizontalScroll++;
+    //   }
+    // };
     // scrollNodes(1)
           
       // // Переключаемся на последний добавленный граф

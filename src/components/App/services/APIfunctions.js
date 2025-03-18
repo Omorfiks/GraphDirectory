@@ -13,6 +13,7 @@ const defaulted = {
       const treeData = response.data;
       // Загружаем данные в хранилище
       useFocusStore().loadTreeData(treeData);
+      useFocusStore().isLoading = false; // Указываем, что данные загружены
       // Очищаем текущие узлы и рёбра
       nodes.value = [];
       edges.value = [];
@@ -24,6 +25,7 @@ const defaulted = {
       recalculateNodePositions();
     } catch (error) {
       console.error("Ошибка при загрузке данных:", error);
+      useFocusStore().isLoading = false; // Указываем, что загрузка завершена (с ошибкой)
     }
   },
 
