@@ -19,6 +19,7 @@ const showRightArrow = computed(() => {
 
 // Прокрутка узлов
 const scrollNodes = () => {
+    focusStore.setTimerStartTime(); // Запускаем таймер
     focusStore.horizontalScroll++;
 };
 </script>

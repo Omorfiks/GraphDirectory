@@ -5,6 +5,7 @@ import Tree from "./components/App/Left/Tree.vue";
 import GraphTree from "./components/App/Center/GraphTree.vue";
 import { useFocusStore } from "../stores/focusStore";
 import { computed } from "vue";
+import FilePreview from "./components/App/Right/FilePreview.vue"
 
 // Вычисляемое свойство для ключа
 const graphKey = computed(() => {
@@ -16,6 +17,8 @@ const graphKey = computed(() => {
   <Grid/>
   <!-- <Auth/> -->
   <GraphTree :key="graphKey"/>
+  <FilePreview v-if="useFocusStore().isFilePreviewVisible"
+  :file="useFocusStore().currentFileNode"/>
   <Tree/>
 </template>
 
@@ -26,5 +29,6 @@ html, body, #app {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  user-select: none; /* Отключаем выделение текста */
 }
 </style>

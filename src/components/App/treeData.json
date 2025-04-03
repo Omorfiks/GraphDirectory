@@ -1,22 +1,22 @@
 [
   {
-    "id": 0,
+    "id": 1,
     "name": "src",
     "type": "folder",
     "children": [
       {
-        "id": 1,
+        "id": 2,
         "name": "components",
         "type": "folder",
         "children": [
           {
-            "id": 2,
+            "id": 3,
             "name": "FileTree.vue",
             "type": "file",
             "children": []
           },
           {
-            "id": 3,
+            "id": 4,
             "name": "TreeNode.vue",
             "type": "file",
             "children": []
@@ -24,16 +24,78 @@
         ]
       },
       {
-        "id": 4,
+        "id": 5,
         "name": "App.vue",
         "type": "file",
         "children": []
       },
       {
-        "id": 5,
+        "id": 6,
         "name": "main.js",
         "type": "file",
         "children": []
+      }
+    ]
+  },
+  {
+    "id": 1,
+    "name": "filesstorage",
+    "type": "folder",
+    "children": [
+      {
+        "name": "jpg",
+        "type": "folder",
+        "children": [
+          {
+            "name": "h7OEH4e3jo.jpg",
+            "type": "file",
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "mp3",
+        "type": "folder",
+        "children": [
+          {
+            "name": "2_5249337182681837440.mp3",
+            "type": "file",
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "mp4",
+        "type": "folder",
+        "children": [
+          {
+            "name": "AgADymkAArGoOEk.mp4",
+            "type": "file",
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "pdf",
+        "type": "folder",
+        "children": [
+          {
+            "name": "test.pdf",
+            "type": "file",
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "txt",
+        "type": "folder",
+        "children": [
+          {
+            "name": "image.txt",
+            "type": "file",
+            "children": []
+          }
+        ]
       }
     ]
   }

@@ -26,7 +26,7 @@
       >
         <!-- Контур (обводка) -->
         <circle
-          v-if="focusedNode === node.id"
+          v-if="focusedNode === node.id+1"
           r="25"
           fill="none"
           stroke="black"
@@ -134,7 +134,7 @@ const edges = ref([]);
 
 // const horizontalScroll = ref(0); // Текущая позиция прокрутки
 
-// // Функция для построения дерева
+// Функция для построения дерева
 const buildTree = (data, parentId = null, level = 0) => {
   const nodeId = nodes.value.length;
   // Расчет координат
@@ -177,9 +177,28 @@ const buildTree = (data, parentId = null, level = 0) => {
   }
 };
 
+const isSupportedFileType = (fileName) => {
+  const supportedExtensions = [".jpg", ".mp3", ".mp4", ".pdf", ".txt"];
+  return supportedExtensions.some((ext) => fileName.endsWith(ext));
+};
+
+// Вычисляемое свойство для проверки флага isDragging
+const isDragging = computed(() => focusStore.isDragging);
+
 // // Выделение узла при наведении
 const highlightNode = (nodeId) => {
-  focusStore.setFocusedNode(nodeId);
+  // Проверяем значение флага isDragging
+  if (isDragging.value) {
+    console.log("Выделение узлов заблокировано: режим перетаскивания активен.");
+    return;
+  }
+  const node = nodes.value.find((n) => n.id === nodeId);
+  if (node && isSupportedFileType(node.name)) {
+    focusStore.showFilePreview(node); // Показываем предпросмотр
+  } else {
+    focusStore.hideFilePreview(); // Скрываем предпросмотр
+  }
+  focusStore.setFocusedNode(nodeId); // Устанавливаем фокус на узле
 };
 
 // Снятие выделения узла
@@ -245,7 +264,7 @@ const recalculateNodePositions = () => {
     const nodeIndex = visibleLevelNodes.indexOf(node);
     if (nodeIndex !== -1) {
       const centerX = parent ? parent.x : width.value / 2;
-      const horizontalSpacing = 200; // Расстояние между узлами одного уровня
+      const horizontalSpacing = 100; // Расстояние между узлами одного уровня
 
       // Рассчитываем позицию узла с учетом четности или нечетности количества узлов
       const totalSiblings = visibleLevelNodes.length;
@@ -266,10 +285,14 @@ const recalculateNodePositions = () => {
   });
 };
 
-onMounted(async () => {  
-  const test = store.graphData.nodes
-  console.log("Узлы графа после загрузки:", test);
+onMounted(async () => {
   await APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions);
+  const startTime = focusStore.getTimerStartTime(); // Получаем время начала таймера
+  if (startTime) {
+    const endTime = Date.now(); // Текущее время
+    const elapsedTime = endTime - startTime; // Разница во времени
+    console.log(`Монтирование компонента заняло ${elapsedTime} мс`);
+  }
 });
 </script>
 

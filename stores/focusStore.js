@@ -2,6 +2,13 @@ import { defineStore } from "pinia";
 
 export const useFocusStore = defineStore("focus", {
   state: () => ({
+    filePreviewPosition: { x: 800, y: 100 }, // Начальная позиция
+    filePreviewSize: { width: 600, height: 400 }, // Начальные размеры
+    timerStartTime: null, // Время начала таймера
+    isDragging: false,
+    isFilePreviewVisible: false,
+    currentFileNode: null, // Текущий выбранный файл
+
     dropdownRefreshKey: 0, // Новое поле для обновления выпадающего списка
     /**
      * Флаг загрузки данных
@@ -120,13 +127,14 @@ export const useFocusStore = defineStore("focus", {
      * @param {number} id - ID узла, который нужно выделить.
      */
     setFocusedNode(id) {
-      this.focusedNode = id;
+      this.focusedNode = id+1;
     },
     /**
      * Сбрасывает фокус (убирает выделение).
      */
     clearFocus() {
       this.focusedNode = null;
+      // this.hideFilePreview(); // Скрываем предпросмотр при сбросе фокуса
     },
     /**
      * Загружает данные дерева из внешнего источника (например, сервера).
@@ -361,6 +369,33 @@ export const useFocusStore = defineStore("focus", {
      */
     refreshDropdown() {
       this.dropdownRefreshKey += 1;
+    },
+    showFilePreview(node) {
+      this.isFilePreviewVisible = true;
+      this.currentFileNode = node;
+    },
+    hideFilePreview() {
+      this.isFilePreviewVisible = false;
+      this.currentFileNode = null;
+    },
+    setIsDragging(value) {
+      this.isDragging = value;
+    },
+    // Установить время начала таймера
+    setTimerStartTime() {
+      this.timerStartTime = Date.now();
+    },
+    // Получить время начала таймера
+    getTimerStartTime() {
+      return this.timerStartTime;
+    },
+    // Установка позиции
+    setFilePreviewPosition(position) {
+      this.filePreviewPosition = position;
+    },
+    // Установка размеров
+    setFilePreviewSize(size) {
+      this.filePreviewSize = size;
     },
   },
 });
