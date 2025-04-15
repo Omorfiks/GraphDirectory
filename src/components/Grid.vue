@@ -1,13 +1,11 @@
 <template>
     <div class="grid-background"></div>
   </template>
-  
   <script>
   export default {
     name: "MovingGrid",
   };
   </script>
-  
   <style>
   /* Стили для контейнера сетки */
   .grid-background {
@@ -21,7 +19,6 @@
                       linear-gradient(to bottom, #ccc 1px, transparent 1px);
     animation: moveDiagonal 5s linear infinite;
   }
-  
   /* Анимация движения */
   @keyframes moveDiagonal {
     0% {

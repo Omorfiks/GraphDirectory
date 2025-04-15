@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-
 export const useFocusStore = defineStore("focus", {
   state: () => ({
     filePreviewPosition: { x: 800, y: 100 }, // Начальная позиция
@@ -8,7 +7,6 @@ export const useFocusStore = defineStore("focus", {
     isDragging: false,
     isFilePreviewVisible: false,
     currentFileNode: null, // Текущий выбранный файл
-
     dropdownRefreshKey: 0, // Новое поле для обновления выпадающего списка
     /**
      * Флаг загрузки данных

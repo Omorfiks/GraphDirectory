@@ -1,7 +1,6 @@
 <template>
   <div class="graph-container">
     <ArrowLeft :visibleNodes="useFocusStore().treeData"/>
-
     <!-- SVG-граф -->
     <svg :width="width">
       <!-- Рёбра -->
@@ -38,10 +37,8 @@
         <text text-anchor="middle" dy=".3em" fill="white">{{ node.name }}</text>
       </g>
     </svg>
-
     <ArrowRight :visibleNodes="useFocusStore().treeData"/>
   </div>
-
       <!-- Компонент управления узлами -->
       <NodeManager
       v-if="isMenuVisible"
@@ -51,20 +48,18 @@
       @closeMenu="closeContextMenu"
     />
 </template>
-
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useFocusStore } from "../../../../stores/focusStore";
 import NodeManager from "./NodeManager.vue"; // Импортируем компонент
 import APIfunctions from "../services/APIfunctions";
 import ArrowLeft from "../Center/ArrowLeft.vue";
 import ArrowRight from "../Center/ArrowsRight.vue";
-
+import { useCacheStore } from "../../../../stores/cacheStore";
 // // Состояние для контекстного меню
 const isMenuVisible = ref(false);
 const contextMenuNodeId = ref(null);
 const menuPosition = ref({ x: 0, y: 0 });
-
 // // Показать контекстное меню
 const showContextMenu = (event, nodeName) => {
   // Находим узел в treeData по его имени
@@ -75,65 +70,36 @@ const showContextMenu = (event, nodeName) => {
   }  
   // Устанавливаем ID узла из treeData
   contextMenuNodeId.value = nodeInTree.id;
-
   // Логируем ID узла
   console.log("ID узла из treeData:", nodeInTree.id);
-
   // Устанавливаем позицию меню
   menuPosition.value = { x: event.pageX, y: event.pageY };
   isMenuVisible.value = true;
 };
-
-
 // Обновление дерева при получении события refreshTree
 const refreshTree = () => {
   APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions); // Перезагружаем данные
 };
-
-// // Закрыть контекстное меню
-// const closeContextMenu = () => {
-//   isMenuVisible.value = false;
-//   contextMenuNodeId.value = null;
-//   refreshTree()
-//   // scrollNodes(-1)
-// };
-
-
 // Закрыть контекстное меню
 const closeContextMenu = () => {
   isMenuVisible.value = false;
   const deletedNodeId = contextMenuNodeId.value; // Сохраняем ID удаляемого узла
   contextMenuNodeId.value = null;
-
   // Проверяем, является ли удаляемый узел текущим корневым видимым узлом
   const rootNodes = nodes.value.filter((node) => node.y === 0); // Все корневые узлы
-  const currentVisibleRootNode = rootNodes[store.horizontalScroll]; // Текущий видимый корневой узел
-
+  const currentVisibleRootNode = rootNodes[focusStore.horizontalScroll]; // Текущий видимый корневой узел
   if (currentVisibleRootNode && currentVisibleRootNode.id === deletedNodeId) {
     scrollNodes(-1); // Прокручиваем назад, если удалили текущий корневой узел
   }
-
   refreshTree(); // Обновляем дерево
 };
-
-
-
 const focusStore = useFocusStore();
 const focusedNode = computed(() => focusStore.focusedNode);
-
 // // Размеры SVG
 const width = ref(window.innerWidth);
-// const height = ref(window.innerHeight);
-
-// Состояние для горизонтальной прокрутки
-const store = useFocusStore()
-
 // // Состояния для узлов и рёбер
 const nodes = ref([]);
 const edges = ref([]);
-
-// const horizontalScroll = ref(0); // Текущая позиция прокрутки
-
 // Функция для построения дерева
 const buildTree = (data, parentId = null, level = 0) => {
   const nodeId = nodes.value.length;
@@ -142,24 +108,19 @@ const buildTree = (data, parentId = null, level = 0) => {
   const centerX = parent ? parent.x : width.value / 2;
   const verticalSpacing = 100; // Расстояние между уровнями
   const horizontalSpacing = 200; // Расстояние между узлами одного уровня
-
   // Если есть родительский узел, рассчитываем координаты относительно него
   const siblings = data.children || [];
   const totalSiblings = siblings.length;
-
   let x = centerX;
   if (totalSiblings > 1) {
     const isOdd = totalSiblings % 2 !== 0;
     const middleIndex = Math.floor(totalSiblings / 2);
-
     x =
       centerX +
       (siblings.indexOf(data) - middleIndex) * horizontalSpacing +
       (isOdd && siblings.indexOf(data) === middleIndex ? 0 : horizontalSpacing / 2);
   }
-
   const y = level * verticalSpacing;
-
   // Добавляем узел
   nodes.value.push({ id: nodeId, name: data.name, x, y });
   focusStore.setNodes(nodes.value)
@@ -167,7 +128,6 @@ const buildTree = (data, parentId = null, level = 0) => {
   if (parentId !== null) {
     edges.value.push({ source: parentId, target: nodeId });
   }
-
   // Рекурсивно добавляем дочерние узлы
   if (data.children) {
     data.children.forEach((child) => {
@@ -176,15 +136,12 @@ const buildTree = (data, parentId = null, level = 0) => {
     });
   }
 };
-
 const isSupportedFileType = (fileName) => {
   const supportedExtensions = [".jpg", ".mp3", ".mp4", ".pdf", ".txt"];
   return supportedExtensions.some((ext) => fileName.endsWith(ext));
 };
-
 // Вычисляемое свойство для проверки флага isDragging
 const isDragging = computed(() => focusStore.isDragging);
-
 // // Выделение узла при наведении
 const highlightNode = (nodeId) => {
   // Проверяем значение флага isDragging
@@ -200,38 +157,30 @@ const highlightNode = (nodeId) => {
   }
   focusStore.setFocusedNode(nodeId); // Устанавливаем фокус на узле
 };
-
 // Снятие выделения узла
 const clearFocus = () => {
   focusStore.clearFocus();
 };
-
 // Вычисляемые свойства для видимых узлов и рёбер
 const visibleNodes = computed(() => {
   const rootNodes = nodes.value.filter((node) => node.y === 0); // Все корневые узлы
-  const visibleRootNode = rootNodes[store.horizontalScroll]; // Только один видимый корневой узел
-
+  const visibleRootNode = rootNodes[focusStore.horizontalScroll]; // Только один видимый корневой узел
   if (!visibleRootNode) return [];
-
   // Добавляем дочерние узлы для видимого корневого узла
   const allVisibleNodes = getSubtreeNodes(visibleRootNode.id);
   return allVisibleNodes;
 });
-
 // Рекурсивная функция для получения всех дочерних узлов
 const getSubtreeNodes = (nodeId) => {
   const result = [nodes.value[nodeId]];
   const children = edges.value
     .filter((edge) => edge.source === nodeId)
     .map((edge) => nodes.value[edge.target]);
-
   children.forEach((child) => {
     result.push(...getSubtreeNodes(child.id));
   });
-
   return result;
 };
-
 // Вычисляемые свойства для видимых рёбер
 const visibleEdges = computed(() => {
   return edges.value.filter((edge) => {
@@ -240,21 +189,6 @@ const visibleEdges = computed(() => {
     return visibleNodes.value.includes(sourceNode) && visibleNodes.value.includes(targetNode);
   });
 });
-
-// Прокрутка узлов
-const scrollNodes = (direction) => {
-  const store = useFocusStore()
-  
-  const rootNodes = store.graphData.nodes.filter((node) => node.y === 0); // Все корневые узлы
-  if (direction === -1 && store.horizontalScroll > 0) {
-    // horizontalScroll.value--;
-    store.horizontalScroll--
-  } else if (direction === 1 && store.horizontalScroll < rootNodes.length - 1) {
-    store.horizontalScroll++
-    // horizontalScroll.value++;
-  }
-};
-
 // Пересчет позиций узлов
 const recalculateNodePositions = () => {
   nodes.value.forEach((node) => {
@@ -265,12 +199,10 @@ const recalculateNodePositions = () => {
     if (nodeIndex !== -1) {
       const centerX = parent ? parent.x : width.value / 2;
       const horizontalSpacing = 100; // Расстояние между узлами одного уровня
-
       // Рассчитываем позицию узла с учетом четности или нечетности количества узлов
       const totalSiblings = visibleLevelNodes.length;
       const isOdd = totalSiblings % 2 !== 0;
       const middleIndex = Math.floor(totalSiblings / 2);
-
       if (isOdd && nodeIndex === middleIndex) {
         // Центральный узел (для нечетного количества)
         node.x = centerX;
@@ -284,9 +216,20 @@ const recalculateNodePositions = () => {
     }
   });
 };
-
 onMounted(async () => {
-  await APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions);
+  focusStore.setTimerStartTime(); // Запускаем таймер
+  const cacheKey = 1; // Уникальный ключ для кэширования
+  // Проверяем, есть ли данные в кэше
+  if (useCacheStore().hasGraphData(cacheKey)) {
+    const cachedData = useCacheStore().loadGraphData(cacheKey);
+    nodes.value = cachedData.nodes;
+    edges.value = cachedData.edges;
+    recalculateNodePositions(); // Пересчитываем позиции узлов
+  } else {
+    await APIfunctions.fetchData(nodes, edges, buildTree, recalculateNodePositions);
+    // Сохраняем данные в кэш
+    useCacheStore().saveGraphData(cacheKey, nodes.value, edges.value, focusStore.treeData);
+  }
   const startTime = focusStore.getTimerStartTime(); // Получаем время начала таймера
   if (startTime) {
     const endTime = Date.now(); // Текущее время
@@ -295,7 +238,6 @@ onMounted(async () => {
   }
 });
 </script>
-
 <style scoped>
 .graph-container {
   position: relative;
@@ -306,11 +248,9 @@ onMounted(async () => {
   align-items: center;
   background: rgba(0, 0, 0, 0.1);
 }
-
 svg {
   overflow: visible;
 }
-
 .arrow {
   position: absolute;
   top: 50%;
@@ -325,11 +265,9 @@ svg {
   cursor: pointer;
   z-index: 10;
 }
-
 .left-arrow {
   left: 10px;
 }
-
 .right-arrow {
   right: 10px;
 }

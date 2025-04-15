@@ -1,7 +1,5 @@
 // treeDataService.js
-
 import axios from "axios";
-
 // Функция для получения данных из сервера
 export async function fetchTreeDataFromDB() {
   try {

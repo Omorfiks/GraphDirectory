@@ -11,18 +11,9 @@
       </span>
       <span v-else>
         <!-- Динамическая иконка для файла -->
-        <span v-if="fileIconType === 'emoji'">
-          <span :class="fileIconClass">{{ fileIcon }}</span> {{ node.name }}
-        </span>
-        <span v-else-if="fileIconType === 'svg'" style="display: flex; align-items: center;">
-          <img
-            v-if="fileIconUrl"
-            :src="fileIconUrl"
-            alt="File Icon"
-            class="file-icon-svg"
-          />
+        <span v-if="fileIconType === 'emoji'" :class="fileIconClass">{{ fileIcon }}</span>
+        <span v-else-if="fileIconType === 'css'" :class="fileIconClass"></span>
           {{ node.name }}
-        </span>
       </span>
     </div>
     <ul v-if="isExpanded && node.children">
@@ -34,12 +25,14 @@
       />
     </ul>
   </li>
+  <IconsFetch/>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useFocusStore } from "../../../../stores/focusStore";
-
+import IconsFetch from "../IconsFetch.vue";
+import { useIconStore } from "../../../../stores/iconStore";
+import { iconMap } from "../../../constants/Maps";
 const props = defineProps({
   node: {
     type: Object,
@@ -57,25 +50,24 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isFocused: {
+    type: Boolean,
+    default: false,
+  }, // Добавляем prop isFocused
 });
-
 // Состояние раскрытия папки
 const isExpanded = ref(false);
-
 // Получение текущего выделенного узла из Pinia
 const focusStore = useFocusStore();
 const focusedNode = computed(() => focusStore.focusedNode);
-
 // Вычисляемое свойство для проверки фокуса
 const isNodeFocused = computed(() => props.node.id === focusedNode.value);
-
-// Переключение состояния папки (развернуть/свернуть)
+// Переключение состояния папки (развернуть/сворачивание)
 const toggleExpand = () => {
   if (props.node.type === "folder") {
     isExpanded.value = !isExpanded.value;
   }
 };
-
 // Обработчик клика по узлу
 const handleClick = () => {
   if (props.node.type === "folder") {
@@ -84,123 +76,49 @@ const handleClick = () => {
   // Устанавливаем фокус на текущий узел
   focusStore.setFocusedNode(props.node.id);
 };
-
-// Функция для проверки существования файла
-const fileExists = async (url) => {
-  try {
-    const response = await fetch(url, { method: "HEAD" });
-    return response.ok; // Возвращает true, если файл существует
-  } catch (error) {
-    return false; // Возвращает false, если произошла ошибка
-  }
-};
-
-// URL иконки файла
-const fileIconUrl = ref(null);
-
-// Цвета из ui-variables.less
-const colorsFromLess = ref({});
-
-// Функция для загрузки и парсинга ui-variables.less
-const loadColorsFromLess = async () => {
-  const lessUrl =
-    "https://raw.githubusercontent.com/jesseweed/seti-ui/master/styles/ui-variables.less";
-  try {
-    const response = await fetch(lessUrl);
-    const lessContent = await response.text();
-
-    // Парсим базовые цвета
-    const baseColors = {};
-    const baseColorRegex = /@(\w+):\s*#([0-9a-fA-F]{6});/g;
-    
-    let match;
-    while ((match = baseColorRegex.exec(lessContent)) !== null) {
-      const colorName = match[1];
-      const colorValue = `#${match[2]}`;
-      baseColors[colorName] = colorValue;
-    }
-
-    // Парсим правила .icon-set
-    const iconSetRegex = /\.icon-set\("(\.\w+)",\s*"[\w-]+",\s*@(\w+)\);/g;
-    const extensionColors = {};
-    while ((match = iconSetRegex.exec(lessContent)) !== null) {
-      const extension = match[1].substring(1); // Убираем точку (например, ".js" → "js")
-      const colorName = match[2];
-      const colorValue = baseColors[colorName] || "#000000"; // Черный (по умолчанию)
-      extensionColors[extension] = colorValue;
-    }
-
-    colorsFromLess.value = extensionColors;
-  } catch (error) {
-    console.error("Ошибка загрузки ui-variables.less:", error);
-  }
-};
-
-// Функция для получения цвета из ui-variables.less
-const getColorForExtension = (extension) => {
-  return colorsFromLess.value[extension] || "#000000"; // Черный (по умолчанию)
-};
-
-// Функция для получения URL иконки
-const getIconUrl = (extension) => {
-  const baseUrl = "https://raw.githubusercontent.com/jesseweed/seti-ui/1cac4f30f93cc898103c62dde41823a09b0d7b74/icons/";
-  let iconFileName = `${extension.toLowerCase()}.svg`;
-  switch (extension.toLowerCase()) {
-    case 'js':
-    iconFileName = `javascript.svg`;    
-      break;
-    default:
-    iconFileName = `${extension.toLowerCase()}.svg`;
-      break;
-  }
-  return `${baseUrl}${iconFileName}`;
-};
-
-// Загрузка иконки
-const loadFileIcon = async () => {
-  if (props.node.type === "file") {
-    const extension = props.node.name.split(".").pop().toLowerCase();
-    const iconUrl = getIconUrl(extension);
-
-    if (await fileExists(iconUrl)) {
-      try {
-        // Загружаем SVG как текст
-        const response = await fetch(iconUrl);
-        const svgText = await response.text();
-
-        // Получаем цвет из ui-variables.less
-        const color = getColorForExtension(extension);
-
-        // Применяем цвет к SVG
-        const coloredSvg = svgText.replace(/fill="[^"]*"/g, `fill="${color}"`);
-        fileIconUrl.value = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(coloredSvg)}`;
-      } catch (error) {
-        console.error("Ошибка загрузки SVG:", error);
-        fileIconUrl.value = null;
-      }
-    } else {
-      fileIconUrl.value = null; // Сбрасываем URL, если файл не найден
-    }
-  }
-};
-
-// Тип иконки (emoji или svg)
+// Реактивное свойство для хранения данных об иконке
+const fileIconData = ref(null);
+// Тип иконки (emoji или css)
 const fileIconType = computed(() => {
   if (props.node.type === "file") {
-    return fileIconUrl.value ? "svg" : "emoji"; // Если есть URL, тип — SVG
+    return fileIconData.value ? "css" : "emoji";
   }
   return null;
 });
-
 // Класс для стилизации иконки
 const fileIconClass = computed(() => {
-  return props.node.type === "file" && fileIconType.value === "emoji" ? "file-icon" : "";
+  return props.node.type === "file" && fileIconType.value === "css"
+    ? `icon icon_${fileIconData.value?.name}`
+    : "";
 });
-
-// Загружаем иконку и цвета при монтировании компонента
+// Реактивное свойство для fileIcon (эмодзи по умолчанию)
+const fileIcon = computed(() => {
+  if (props.node.type === "file") {
+    const extension = props.node.name.split(".").pop().toLowerCase();
+    return iconMap[extension] || "❓"; // Возвращаем иконку из iconMap или "❓", если нет совпадений
+  }
+  return null;
+});
+// Функция для загрузки иконки
+const loadFileIcon = async () => {
+  if (props.node.type === "file") {
+    const extension = props.node.name.split(".").pop().toLowerCase();    
+    const iconData = useIconStore().getIconData(extension); // Получаем данные об иконке    
+    if (iconData) {
+      const style = document.createElement("style");
+    style.innerHTML = iconData.css;
+    document.head.appendChild(style);
+      fileIconData.value = iconData; // Сохраняем данные об иконке
+    } else {
+      fileIconData.value = null; // Если иконка не найдена
+    }
+  }
+};
+// Загружаем иконку при монтировании компонента
 onMounted(async () => {
-  await loadColorsFromLess(); // Загружаем цвета из ui-variables.less
-  loadFileIcon(); // Загружаем иконку
+  // Загрузка данных темы
+  await useIconStore().fetchThemeFile();
+  await loadFileIcon();
 });
 // Автоматическое разворачивание при автофокусе
 watch(
@@ -211,7 +129,6 @@ watch(
     }
   }
 );
-
 // Дополнительная проверка для корневого узла
 watch(
   () => focusedNode.value,
@@ -221,7 +138,6 @@ watch(
     }
   }
 );
-
 // Добавляем слежение за изменениями в данных узла
 watch(
   () => props.node.children,
@@ -232,32 +148,26 @@ watch(
   },
   { deep: true } // Глубокое наблюдение за массивом children
 );
-
 </script>
-
 <style scoped>
 li {
   margin-left: 1rem;
   position: relative;
 }
-
 ul {
   list-style-type: none;
   padding: 0;
   margin: 0;
 }
-
 .focused {
   outline: 2px solid white; /* Белая обводка */
   border-radius: 4px;
   padding: 0.2rem;
 }
-
 .file-icon {
   margin-right: 8px; /* Отступ между иконкой и текстом */
   font-size: 1.2em; /* Размер иконки */
 }
-
 .file-icon-svg {
   width: 32px; /* Размер SVG-иконки */
   height: 32px;

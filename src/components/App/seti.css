@@ -1,0 +1,5 @@
+/* seti.css */
+@font-face {
+    font-family: "seti";
+    src: url("/src/components/App/seti.woff") format("woff");
+  }

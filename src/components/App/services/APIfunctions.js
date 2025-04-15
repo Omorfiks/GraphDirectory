@@ -1,7 +1,6 @@
 import axios from "axios";
 import { useFocusStore } from "../../../../stores/focusStore";
 import { ref } from "vue";
-
 // Экспортируем объект с методами
 const defaulted = {
   /**
@@ -28,22 +27,18 @@ const defaulted = {
       useFocusStore().isLoading = false; // Указываем, что загрузка завершена (с ошибкой)
     }
   },
-
   /**
    * Имя нового файла или папки
    */
   newFileName: ref(""),
-
   /**
    * Файл/папка
    */
   newFileType: ref("file"),
-
   /**
    * Предок добавляемого элемента
    */
   newFileParentId: ref(null),
-
   /**
    * Отправляем POST-запрос на сервер для добавления нового узла
    */
@@ -64,5 +59,4 @@ const defaulted = {
     }
   },
 };
-
 export default defaulted;

@@ -6,13 +6,11 @@ import GraphTree from "./components/App/Center/GraphTree.vue";
 import { useFocusStore } from "../stores/focusStore";
 import { computed } from "vue";
 import FilePreview from "./components/App/Right/FilePreview.vue"
-
 // Вычисляемое свойство для ключа
 const graphKey = computed(() => {
   return `${useFocusStore().horizontalScroll}-${useFocusStore().refreshGraph}`;
 });
 </script>
-
 <template>
   <Grid/>
   <!-- <Auth/> -->
@@ -21,7 +19,6 @@ const graphKey = computed(() => {
   :file="useFocusStore().currentFileNode"/>
   <Tree/>
 </template>
-
 <style>
 html, body, #app {
   margin: 0;

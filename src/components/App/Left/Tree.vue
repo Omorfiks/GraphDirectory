@@ -23,61 +23,50 @@
     <p v-else>Загрузка данных...</p>
   </div>
 </template>
-
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, computed } from "vue";
 import TreeNode from "./TreeNode.vue";
 import axios from "axios";
 import AddFileForm from "../other/AddFileForm.vue"; // Импортируем новый компонент
 import { useFocusStore } from "../../../../stores/focusStore";
-
 // Данные дерева из хранилища
 const treeData = computed(() => useFocusStore().treeData);
-
 // Состояние для уведомления
 const notification = ref("");
-
 // Состояние для позиции компонента
 const position = ref({ top: 10, left: 10 });
-
 // Флаг для отслеживания состояния перетаскивания
 const isDragging = ref(false);
-
 // Позиция курсора при начале перетаскивания
 const dragStart = ref({ x: 0, y: 0 });
-
-// Функция для загрузки данных с сервера
-const fetchData = async () => {
-  try {
-    const response = await axios.get("http://localhost:3000/api/tree-data");
-    treeData.value = response.data; // Обновляем данные дерева
-  } catch (error) {
-    console.error("Ошибка при загрузке данных:", error);
-  }
-};
-
-// Функция для обновления файла JSON
-const updateJson = async () => {
-  try {
-    const response = await axios.get("http://localhost:3000/update-tree");
-    console.log(response.data.message);
-
-    // Показываем уведомление
-    notification.value = "Данные успешно обновлены!";
-    setTimeout(() => {
-      notification.value = ""; // Скрываем уведомление через 2 секунды
-    }, 2000);
-  } catch (error) {
-    console.error("Ошибка при обновлении JSON:", error);
-
-    // Показываем уведомление об ошибке
-    notification.value = "Ошибка при обновлении данных!";
-    setTimeout(() => {
-      notification.value = ""; // Скрываем уведомление через 2 секунды
-    }, 2000);
-  }
-};
-
+// // Функция для загрузки данных с сервера
+// const fetchData = async () => {
+//   try {
+//     const response = await axios.get("http://localhost:3000/api/tree-data");
+//     treeData.value = response.data; // Обновляем данные дерева
+//   } catch (error) {
+//     console.error("Ошибка при загрузке данных:", error);
+//   }
+// };
+// // Функция для обновления файла JSON
+// const updateJson = async () => {
+//   try {
+//     const response = await axios.get("http://localhost:3000/update-tree");
+//     console.log(response.data.message);
+//     // Показываем уведомление
+//     notification.value = "Данные успешно обновлены!";
+//     setTimeout(() => {
+//       notification.value = ""; // Скрываем уведомление через 2 секунды
+//     }, 2000);
+//   } catch (error) {
+//     console.error("Ошибка при обновлении JSON:", error);
+//     // Показываем уведомление об ошибке
+//     notification.value = "Ошибка при обновлении данных!";
+//     setTimeout(() => {
+//       notification.value = ""; // Скрываем уведомление через 2 секунды
+//     }, 2000);
+//   }
+// };
 // Начало перетаскивания
 const startDrag = (event) => {
   isDragging.value = true;
@@ -85,12 +74,10 @@ const startDrag = (event) => {
     x: event.clientX - position.value.left,
     y: event.clientY - position.value.top,
   };
-
   // Добавляем слушатели событий на документ
   document.addEventListener("mousemove", handleDrag);
   document.addEventListener("mouseup", stopDrag);
 };
-
 // Обработка перетаскивания
 const handleDrag = (event) => {
   if (isDragging.value) {
@@ -100,22 +87,14 @@ const handleDrag = (event) => {
     };
   }
 };
-
 // Остановка перетаскивания
 const stopDrag = () => {
   isDragging.value = false;
-
   // Удаляем слушатели событий с документа
   document.removeEventListener("mousemove", handleDrag);
   document.removeEventListener("mouseup", stopDrag);
 };
-
-// Загрузка данных при монтировании компонента
-onMounted(async () => {
-  await fetchData();
-});
 </script>
-
 <style scoped>
 .file-tree {
   position: absolute; /* Изменяем на absolute для свободного перемещения */
@@ -129,23 +108,19 @@ onMounted(async () => {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   cursor: grab; /* Курсор для захвата */
 }
-
 .file-tree:active {
   cursor: grabbing; /* Курсор при перетаскивании */
 }
-
 h3 {
   margin-top: 0;
   font-size: 1rem;
   color: #ccc;
 }
-
 ul {
   list-style-type: none;
   padding: 0;
   margin: 0;
 }
-
 button {
   margin-bottom: 1rem;
   padding: 0.5rem 1rem;
@@ -155,15 +130,12 @@ button {
   border-radius: 4px;
   cursor: pointer;
 }
-
 button:hover {
   background-color: #0056b3;
 }
-
 p {
   color: #ccc;
 }
-
 /* Стили для уведомления */
 .notification {
   position: absolute;
@@ -177,7 +149,6 @@ p {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   animation: slide-down 1s ease-out forwards, fade-out 1s 3s ease-in-out forwards;
 }
-
 /* Анимация появления */
 @keyframes slide-down {
   from {
@@ -187,7 +158,6 @@ p {
     top: -10px;
   }
 }
-
 /* Анимация исчезновения */
 @keyframes fade-out {
   from {
