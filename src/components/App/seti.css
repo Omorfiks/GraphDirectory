@@ -3,3 +3,11 @@
     font-family: "seti";
     src: url("/src/components/App/seti.woff") format("woff");
   }
+/* Стиль для иконок */
+.icon {
+  font-family: "seti" !important;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 24px; /* Размер иконки */
+  vertical-align: middle;
+}

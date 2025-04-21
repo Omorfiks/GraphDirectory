@@ -454,6 +454,10 @@
 			"fontCharacter": "\\E031",
 			"fontColor": "#e37933"
 		},
+		"_folder": {
+			"fontCharacter": "\\E032",
+			"fontColor": "#e37933"
+		},
 		"_font_light": {
 			"fontCharacter": "\\E033",
 			"fontColor": "#b8383d"
@@ -1556,6 +1560,7 @@
 	},
 	"file": "_default",
 	"fileExtensions": {
+		"folder": "_folder",
 		"bsl": "_bsl",
 		"mdo": "_mdo",
 		"cls": "_salesforce",
@@ -1797,6 +1802,7 @@
 		"ds_store": "_ignored"
 	},
 	"fileNames": {
+		"folder": "_folder",
 		"mix": "_hex",
 		"karma.conf.js": "_karma",
 		"karma.conf.cjs": "_karma",
@@ -1900,6 +1906,7 @@
 		"npm-debug.log": "_npm_ignored"
 	},
 	"languageIds": {
+		"folder": "_folder",
 		"bat": "_windows",
 		"clojure": "_clojure",
 		"coffeescript": "_coffee",

@@ -1,5 +1,6 @@
 import './assets/main.css'
 import "../src/components/App/seti.css";
+import "../src/components/App/codicon.css";
 import { createApp } from 'vue'
 import { createPinia } from 'pinia' // Импортируем Pinia
 import App from './App.vue'

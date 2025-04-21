@@ -2,7 +2,7 @@
 import Grid from "./components/Grid.vue";
 import Auth from "./components/AuthScreen/Auth.vue";
 import Tree from "./components/App/Left/Tree.vue";
-import GraphTree from "./components/App/Center/GraphTree.vue";
+import GraphTree from "./components/App/Center/GraphTree/GraphTree.vue";
 import { useFocusStore } from "../stores/focusStore";
 import { computed } from "vue";
 import FilePreview from "./components/App/Right/FilePreview.vue"

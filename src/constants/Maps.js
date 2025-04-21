@@ -8,18 +8,18 @@ export const iconNameMapping = {
     ts: "typescript",
     // Добавьте другие маппинги по необходимости
   };
-// Массив резервных иконок
-export const iconMap = {
-    jpg: "🖼️",
-    jpeg: "🖼️",
-    png: "🖼️",
-    gif: "🖼️",
-    mp3: "🎵",
-    wav: "🎵",
-    mp4: "🎥",
-    avi: "🎥",
-    txt: "📝",
-    zip: "📦",
-    rar: "📦",
-    html: "🔗",
-};
+// // Массив резервных иконок
+// export const iconMap = {
+//     jpg: "🖼️",
+//     jpeg: "🖼️",
+//     png: "🖼️",
+//     gif: "🖼️",
+//     mp3: "🎵",
+//     wav: "🎵",
+//     mp4: "🎥",
+//     avi: "🎥",
+//     txt: "📝",
+//     zip: "📦",
+//     rar: "📦",
+//     html: "🔗",
+// };

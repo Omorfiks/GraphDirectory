@@ -11,7 +11,7 @@
       </span>
       <span v-else>
         <!-- Динамическая иконка для файла -->
-        <span v-if="fileIconType === 'emoji'" :class="fileIconClass">{{ fileIcon }}</span>
+        <span v-if="fileIconType === 'emoji'" :class="fileIconClass"></span>
         <span v-else-if="fileIconType === 'css'" :class="fileIconClass"></span>
           {{ node.name }}
       </span>
@@ -25,14 +25,11 @@
       />
     </ul>
   </li>
-  <IconsFetch/>
 </template>
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useFocusStore } from "../../../../stores/focusStore";
-import IconsFetch from "../IconsFetch.vue";
 import { useIconStore } from "../../../../stores/iconStore";
-import { iconMap } from "../../../constants/Maps";
 const props = defineProps({
   node: {
     type: Object,
@@ -87,22 +84,27 @@ const fileIconType = computed(() => {
 });
 // Класс для стилизации иконки
 const fileIconClass = computed(() => {
+  if (props.node.type === "file") {
+    const extension = props.node.name.split(".").pop().toLowerCase();
+  if (extension=="jpg") {
+    return `codicon codicon-device-camera`; // Если расширение найдено, возвращаем соответствующий класс
+  } else if (extension=="mp3") {
+    return `codicon codicon-unmute`; // Если расширение найдено, возвращаем соответствующий класс
+  } else if (extension=="mp4") {
+    return `codicon codicon-play-circle`; // Если расширение найдено, возвращаем соответствующий класс
+  } else if (extension=="txt") {
+    return `codicon codicon-list-flat`; // Если расширение найдено, возвращаем соответствующий класс
+  } else {
   return props.node.type === "file" && fileIconType.value === "css"
     ? `icon icon_${fileIconData.value?.name}`
     : "";
-});
-// Реактивное свойство для fileIcon (эмодзи по умолчанию)
-const fileIcon = computed(() => {
-  if (props.node.type === "file") {
-    const extension = props.node.name.split(".").pop().toLowerCase();
-    return iconMap[extension] || "❓"; // Возвращаем иконку из iconMap или "❓", если нет совпадений
   }
-  return null;
+  }
 });
 // Функция для загрузки иконки
 const loadFileIcon = async () => {
   if (props.node.type === "file") {
-    const extension = props.node.name.split(".").pop().toLowerCase();    
+    const extension = props.node.name.split(".").pop().toLowerCase();
     const iconData = useIconStore().getIconData(extension); // Получаем данные об иконке    
     if (iconData) {
       const style = document.createElement("style");
