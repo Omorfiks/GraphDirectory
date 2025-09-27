@@ -58,5 +58,35 @@ const defaulted = {
       console.error("Ошибка при добавлении файла:", error);
     }
   },
+  /**
+   * Функция для получения URL файла
+   */
+  fileUrl: async (fileName) => {
+    if (!fileName) return "";
+
+    const extension = fileName.split(".").pop().toLowerCase();
+    let subfolder = "other";
+
+    if ([".jpg", ".jpeg", ".png", ".gif"].includes(`.${extension}`)) {
+      subfolder = "jpg";
+    } else if ([".mp3", ".wav", ".flac"].includes(`.${extension}`)) {
+      subfolder = "mp3";
+    } else if ([".mp4", ".avi", ".mkv"].includes(`.${extension}`)) {
+      subfolder = "mp4";
+    } else if ([".pdf"].includes(`.${extension}`)) {
+      subfolder = "pdf";
+    } else if ([".txt"].includes(`.${extension}`)) {
+      subfolder = "txt";
+    }
+    try {
+      const response = await axios.post("http://localhost:3000/api/filesystem", {
+        fileNames: fileName,
+      });
+      const filePath = response.data;
+      return `/${filePath}`;
+    } catch (err) {
+      return "";
+    }
+  },
 };
 export default defaulted;

@@ -38,3 +38,9 @@
 .codicon-device-camera::before {
 	content: "\Eada";
 }
+.codicon-arrow-right::before {
+	content: "\Ea9c";
+}
+.codicon-arrow-left::before {
+	content: "\Ea9b";
+}

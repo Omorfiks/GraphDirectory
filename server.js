@@ -346,7 +346,66 @@ app.get("/update-tree", (req, res) => {
     res.status(500).json({ error: "Не удалось обновить файл или базу данных" });
   }
 });
+// Функция для рекурсивного построения структуры файловой системы
+function buildFileSystemStructure(rootPath) {
+  const fileSystem = {};
 
+  function walk(currentPath) {
+    const items = fs.readdirSync(currentPath, { withFileTypes: true });
+    const result = {};
+
+    for (const item of items) {
+      const fullPath = path.join(currentPath, item.name);
+      const relativePath = path.relative(rootPath, fullPath);
+
+      if (item.isDirectory()) {
+        // Если это папка — рекурсивно строим её содержимое
+        result[item.name] = walk(fullPath);
+      } else {
+        // Если это файл — добавляем его как ключ с значением null
+        result[item.name] = item.name;
+      }
+    }
+
+    return result;
+  }
+
+  // Строим дерево от корня проекта
+  return walk(rootPath);
+}
+function findFilePath(fileSystem, targetFileName) {
+  const paths = [];
+
+  function search(node, currentPath = "") {
+    for (const key in node) {
+      // Пропускаем папку node_modules
+      if (key === "node_modules") continue;
+      const newPath = currentPath ? `${currentPath}\\${key}` : key;
+      if (key === targetFileName) {
+        paths.push(newPath);
+      } else if (typeof node[key] === "object") {
+        search(node[key], newPath);
+      }
+    }
+  }
+
+  search(fileSystem);
+  return paths;
+}
+app.post("/api/filesystem", (req, res) => {
+  try {
+    const { fileNames } = req.body; // Получаем fileName из тела запроса
+    const fileSystem = buildFileSystemStructure(__dirname);
+    // Пример использования
+    let filePaths = findFilePath(fileSystem, fileNames);
+    const filePath = filePaths[0].replace(/\\/g, "/");
+    console.log(filePath); // ["src\\main.js"]
+    res.json(filePath);
+  } catch (err) {
+    console.error("Ошибка при формировании структуры:", err);
+    res.status(500).json({ error: "Не удалось получить структуру файла" });
+  }
+});
 // Запуск сервера
 app.listen(port, () => {
   console.log(`Сервер запущен на http://localhost:${port}`);

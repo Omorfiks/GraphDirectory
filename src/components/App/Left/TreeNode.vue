@@ -1,6 +1,10 @@
 <template>
-  <li :class="{ focused: isNodeFocused }">
-    <div @click="handleClick" style="cursor: pointer; display: flex; align-items: center;">
+<li :class="{ focused: isFocused, editing: isEditing }">
+    <div @click="handleClick" 
+    style="cursor: pointer; display: flex; align-items: center;"
+    @mouseenter="setFocusOnHover"
+    @mouseleave="clearFocusOnHover"
+    @dblclick="toggleEdit(node.id)">
       <!-- Иконка минуса или плюса для сворачивания/разворачивания -->
       <span v-if="node.type === 'folder'" @click.stop="toggleExpand">
         {{ isExpanded ? "[-]" : "[+]" }}
@@ -14,16 +18,29 @@
         <span v-if="fileIconType === 'emoji'" :class="fileIconClass"></span>
         <span v-else-if="fileIconType === 'css'" :class="fileIconClass"></span>
           {{ node.name }}
+          <span v-if="isEditing">
+          (Editing)
+          </span>
       </span>
+      <!-- Поле для редактирования текста -->
+      <!-- <input
+        v-if="isEditing"
+        v-model="editedName"
+        @keydown.enter="saveName"
+        @blur="saveName"
+        style="border: 2px solid green; padding: 4px; margin-left: 8px;"
+      /> -->
     </div>
-    <ul v-if="isExpanded && node.children">
-      <TreeNode
-        v-for="(child, index) in node.children"
-        :key="index"
-        :node="child"
-        :auto-expand="child.id === focusedNode"
-      />
-    </ul>
+    <Transition name="test" defer>
+      <ul v-if="isExpanded && node.children">
+        <TreeNode
+          v-for="(child, index) in node.children"
+          :key="index"
+          :node="child"
+          :auto-expand="child.id === focusedNode"
+        />
+      </ul>
+  </Transition>
   </li>
 </template>
 <script setup>
@@ -57,8 +74,6 @@ const isExpanded = ref(false);
 // Получение текущего выделенного узла из Pinia
 const focusStore = useFocusStore();
 const focusedNode = computed(() => focusStore.focusedNode);
-// Вычисляемое свойство для проверки фокуса
-const isNodeFocused = computed(() => props.node.id === focusedNode.value);
 // Переключение состояния папки (развернуть/сворачивание)
 const toggleExpand = () => {
   if (props.node.type === "folder") {
@@ -71,7 +86,11 @@ const handleClick = () => {
     toggleExpand();
   }
   // Устанавливаем фокус на текущий узел
-  focusStore.setFocusedNode(props.node.id);
+  focusStore.setFocusedNode(props.node.id-1);
+  // Если это файл — активируем редактирование
+  if (props.node.type === "file") {
+    focusStore.setEditingNode(props.node.id);
+  }
 };
 // Реактивное свойство для хранения данных об иконке
 const fileIconData = ref(null);
@@ -116,10 +135,43 @@ const loadFileIcon = async () => {
     }
   }
 };
+// Функции для фокуса при наведении
+const setFocusOnHover = () => {
+  focusStore.setFocusedNode(props.node.id-1);
+  focusStore.setHoveredNode(props.node.id-1);
+  if (props.node.type != "folder") {
+    focusStore.showFilePreview(props.node); // Показываем предпросмотр
+  } else {
+    focusStore.hideFilePreview(); // Скрываем предпросмотр
+  }
+};
+const clearFocusOnHover = () => {
+  // Если узел не активен и не фокусирован — снимаем фокус
+  if (isNodeFocused) {
+    focusStore.clearFocus();
+  }
+};
+// Проверка, является ли узел редактируемым
+const isEditing = computed(() => props.node.id === focusStore.editingNode);
+// Проверка фокуса на узле
+const isFocused = computed(() => props.node.id === focusStore.focusedNode);
+// Обработка двойного клика
+const toggleEdit = (nodeId) => {
+  focusStore.isNodeFocused = isEditing.value;
+  isEditing.value = !isEditing.value;
+  focusStore.isEditingNode = props.node.id;
+  focusStore.setEditingNode(nodeId);
+};
+// Обработка нажатия Enter для сохранения
+const handleKeyDown = (event) => {
+  if (event.key === "Enter") {
+    console.log(123); 
+  }
+};
+// В компоненте TreeNode.vue
+const isNodeFocused = computed(() => props.node.id === focusStore.focusedNode);
 // Загружаем иконку при монтировании компонента
 onMounted(async () => {
-  // Загрузка данных темы
-  await useIconStore().fetchThemeFile();
   await loadFileIcon();
 });
 // Автоматическое разворачивание при автофокусе
@@ -155,16 +207,23 @@ watch(
 li {
   margin-left: 1rem;
   position: relative;
+  transition: all 0.5s ease;
+}
+li.focused {
+  outline: 2px solid white;
+  border-radius: 4px;
+  padding: 0.2rem;
+  transition: all 0.5s ease;
+}
+li.editing {
+  outline: 2px solid green;
+  border-radius: 4px;
+  padding: 0.2rem;
 }
 ul {
   list-style-type: none;
   padding: 0;
   margin: 0;
-}
-.focused {
-  outline: 2px solid white; /* Белая обводка */
-  border-radius: 4px;
-  padding: 0.2rem;
 }
 .file-icon {
   margin-right: 8px; /* Отступ между иконкой и текстом */
@@ -173,5 +232,22 @@ ul {
 .file-icon-svg {
   width: 32px; /* Размер SVG-иконки */
   height: 32px;
+}
+/*
+  Анимации появления и исчезновения могут иметь
+  различные продолжительности и функции плавности.
+*/
+.test-enter-active {
+  transition: all 0.2s ease;
+}
+
+.test-leave-active {
+  transition: all 0.2s ease;
+}
+
+.test-enter-from,
+.test-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
 }
 </style>

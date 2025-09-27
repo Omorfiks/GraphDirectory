@@ -36,7 +36,6 @@
   console.log(props);
     try {
       await axios.delete(`http://localhost:3000/api/delete-node/${props.currentNodeId}`);
-      // useFocusStore().horizontalScroll = 0
       // Уведомляем родителя об удалении узла
       emit("nodeDeleted", props.currentNodeId);
       // Закрываем меню

@@ -2,7 +2,7 @@
   <div
     class="file-preview"
     :style="previewStyle"
-    @mousedown="startDrag"
+    @mousedown.stop="handleMouseDown"
   >
     <!-- Загрузка файла -->
     <div v-if="loading" class="loading">Загрузка...</div>
@@ -16,41 +16,42 @@
     ></div>
     <!-- Предварительный просмотр -->
     <div class="preview-content">
-    <!-- Текстовые файлы -->
-    <pre v-if="isTextFile">{{ textContent }}</pre>
-    <!-- Изображения -->
-    <img v-else-if="isImage" :src="imageViewerUrl" alt="Preview" />
-    <!-- PDF -->
-    <iframe
-      v-else-if="isPdf"
-      :src="pdfViewerUrl"
-      frameborder="0"
-      class="pdf-viewer"
-      :type="`application/${fileType}`"
-    ></iframe>
-    <!-- Аудио -->
-    <audio v-else-if="isAudio" controls>
-      <source :src="audioViewerUrl" :type="`audio/${fileType}`" />
-      Ваш браузер не поддерживает воспроизведение аудио.
-    </audio>
-    <!-- Видео -->
-    <video v-else-if="isVideo" controls width="320" height="240">
-      <source :src="videoViewerUrl" :type="`video/${fileType}`" />
-      Ваш браузер не поддерживает воспроизведение видео.
-    </video>
-    <!-- Неподдерживаемый тип файла -->
-    <div v-else class="unsupported">
-      Файл не поддерживается для предварительного просмотра.
+      <!-- Текстовые файлы -->
+      <pre v-if="isTextFile" class="textContent" :style="previewStyleText">{{ textContent }}</pre>
+      <!-- Изображения -->
+      <img v-else-if="isImage" :src="viewerUrls.image" alt="Preview" />
+      <!-- PDF -->
+      <iframe
+        v-else-if="isPdf"
+        :src="viewerUrls.pdf"
+        frameborder="0"
+        class="pdf-viewer"
+        :type="`application/${fileType}`"
+      ></iframe>
+      <!-- Аудио -->
+      <audio v-else-if="viewerUrls.audio" controls>
+        <source :src="viewerUrls.audio" :type="`audio/${fileType}`" />
+        Ваш браузер не поддерживает воспроизведение аудио.
+      </audio>
+      <!-- Видео -->
+      <video v-else-if="viewerUrls.video" controls width="320" height="240">
+        <source :src="viewerUrls.video" :type="`video/${fileType}`" />
+        Ваш браузер не поддерживает воспроизведение видео.
+      </video>
+      <!-- Неподдерживаемый тип файла -->
+      <div v-else class="unsupported">
+        Файл не поддерживается для предварительного просмотра.
+      </div>
     </div>
-  </div>
-  <!-- Ручка для изменения размера -->
-  <div class="resize-handle" @mousedown="startResize"></div>
+    <!-- Ручка для изменения размера -->
+    <div class="resize-handle" @mousedown="startResize"></div>
   </div>
 </template>
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useFocusStore } from "../../../../stores/focusStore";
 import { useCacheStore } from "../../../../stores/cacheStore"; // Импортируем кэш-стор
+import APIfunctions from "../services/APIfunctions";
 // Состояния
 const loading = ref(false);
 const error = ref(null);
@@ -67,47 +68,85 @@ const isResizing = ref(false);
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
 // Извлечение имени файла из хранилища
 const currentFileNode = computed(() => useFocusStore().currentFileNode);
-const isPdf = computed(() => fileType.value === "pdf");
-const isAudio = computed(() => ["mp3", "wav"].includes(fileType.value));
-const isVideo = computed(() => ["mp4", "webm"].includes(fileType.value));
-// Получение типа файла
+const isTextFile = computed(() => ["txt", "json", "html", "css", "js", "vue"].includes(fileType.value));
+const isImage = computed(() => ["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(fileType.value));
+const isPdf = computed(() => ["pdf"].includes(fileType.value));
+const isAudio = computed(() => ["mp3", "wav", "flac"].includes(fileType.value));
+const isVideo = computed(() => ["mp4", "webm", "avi"].includes(fileType.value));
+const fileName = computed(() => currentFileNode.value?.name || "");
 const fileType = computed(() => {
-  if (!currentFileNode.value?.name) return null;
-  const extension = currentFileNode.value.name.split(".").pop().toLowerCase();
-  return extension;
+  if (!fileName.value) return "";
+  const ext = fileName.value.split(".").pop().toLowerCase();
+  return ext;
 });
-// Определение типа контента
-const isTextFile = computed(() =>
-  ["txt", "json", "html", "css", "js"].includes(fileType.value)
-);
-const isImage = computed(() =>
-  ["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(fileType.value)
-);
-// Функция для получения URL файла
-const fileUrl = (fileName) => {
-  if (!fileName) return "";
-  const extension = fileName.split(".").pop().toLowerCase();
-  let subfolder = "other";
-  if ([".jpg", ".jpeg", ".png", ".gif"].includes(`.${extension}`)) {
-    subfolder = "jpg";
-  } else if ([".mp3", ".wav", ".flac"].includes(`.${extension}`)) {
-    subfolder = "mp3";
-  } else if ([".mp4", ".avi", ".mkv"].includes(`.${extension}`)) {
-    subfolder = "mp4";
-  } else if ([".pdf"].includes(`.${extension}`)) {
-    subfolder = "pdf";
-  } else if ([".txt"].includes(`.${extension}`)) {
-    subfolder = "txt";
+const viewerUrls = ref({
+  pdf: '',
+  image: '',
+  audio: '',
+  video: '',
+});
+// Универсальная функция для получения URL
+const getViewerUrl = async (cacheName, fileName) => {
+  try {
+    // Проверяем кэш
+    if (cacheStore.hasInCache(cacheName, fileName)) {
+      const cachedUrl = cacheStore.getFromCache(cacheName, fileName);
+      if (cachedUrl) {
+        return cachedUrl;
+      }
+    }
+    // Если нет в кэше — загружаем
+    loading.value = true;
+    const url = await loadMedia(fileName); // ← должна вернуть реальный URL
+    cacheStore.addToCache(cacheName, fileName, url);
+    return url;
+  } catch (error) {
+    console.error('Ошибка при получении URL:', error);
+    return '';
+  } finally {
+    loading.value = false;
   }
-  return `/filesstorage/${subfolder}/${fileName}`;
 };
 // Загрузка текстового файла
 const loadTextFile = async (fileName) => {
   try {
-    const response = await fetch(fileUrl(fileName));
+    const content = ref('');
+    const response = await fetch(await APIfunctions.fileUrl(fileName));
     if (!response.ok) throw new Error("Ошибка загрузки текстового файла");
-    const content = await response.text();
-    cacheStore.addToCache("textCache", fileName, content); // Сохраняем содержимое в кэш
+    if (response.url == "http://localhost:5173/") {
+      content.value = "Ошибка при получении пути";
+    } else {
+      content.value = await response.text();
+    }
+    cacheStore.addToCache("textCache", fileName, content.value); // Сохраняем содержимое в кэш
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+};
+// Загрузка медиафайла
+const loadMedia = async (fileName) => {
+  if (!fileName) return;
+  loading.value = true;
+  error.value = null;
+  try {
+    const url = await APIfunctions.fileUrl(fileName);
+    if (!url) throw new Error("Файл не найден");
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Ошибка загрузки файла");
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    if (isPdf.value) {
+      cacheStore.addToCache("pdfCache", fileName, objectUrl);
+    } else if (isAudio.value) {
+      cacheStore.addToCache("audioCache", fileName, objectUrl);
+    } else if (isVideo.value) {
+      cacheStore.addToCache("videoCache", fileName, objectUrl);
+    } else if (isImage.value) {
+      cacheStore.addToCache("imageCache", fileName, objectUrl);
+    }
+    return url;
   } catch (err) {
     error.value = err.message;
   } finally {
@@ -116,14 +155,10 @@ const loadTextFile = async (fileName) => {
 };
 // Содержимое текстового файла
 const textContent = computed(() => {
-  if (!currentFileNode.value?.name || !isTextFile.value) return "";
-  const fileName = currentFileNode.value.name;
-  // Проверяем, есть ли файл в кэше
-  if (cacheStore.hasInCache("textCache", fileName)) {
-    return cacheStore.getFromCache("textCache", fileName); // Возвращаем закэшированное содержимое
-  }
-  // Если файла нет в кэше, загружаем его
-  loadTextFile(fileName);
+  if (!fileName.value || !isTextFile.value) return "";
+  const cachedContent = cacheStore.getFromCache("textCache", fileName.value);
+  if (cachedContent) return cachedContent;
+  loadTextFile(fileName.value);
   return "Загрузка текстового файла...";
 });
 // Стиль компонента
@@ -134,21 +169,21 @@ const previewStyle = computed(() => ({
   width: `${size.value.width}px`,
   height: `${size.value.height}px`,
 }));
+// Стиль компонента
+const previewStyleText = computed(() => ({
+  position: "absolute",
+  width: `${size.value.width}px`,
+  height: `${size.value.height}px`,
+}));
 // Начало перетаскивания
 const startDrag = (event) => {
-  // Проверяем, что событие не произошло на элементе .resize-handle
-  if (event.target.classList.contains("resize-handle")) {
-    return;
-  }
+  if (event.target.classList.contains("resize-handle")) return;
   isDragging.value = true;
-  // Блокируем выделение других узлов графа
   useFocusStore().setIsDragging(true);
-  // Сохраняем начальные данные
   dragStart.value = {
     x: event.clientX - position.value.x,
     y: event.clientY - position.value.y,
   };
-  // Добавляем обработчики событий для перетаскивания
   window.addEventListener("mousemove", handleDrag);
   window.addEventListener("mouseup", stopDrag);
 };
@@ -159,14 +194,12 @@ const handleDrag = (event) => {
       x: event.clientX - dragStart.value.x,
       y: event.clientY - dragStart.value.y,
     };
-    // Сохраняем позицию в хранилище
     useFocusStore().setFilePreviewPosition(position.value);
   }
 };
 // Остановка перетаскивания
 const stopDrag = () => {
   isDragging.value = false;
-  // Разблокируем выделение узлов графа
   useFocusStore().setIsDragging(false);
   window.removeEventListener("mousemove", handleDrag);
   window.removeEventListener("mouseup", stopDrag);
@@ -174,129 +207,72 @@ const stopDrag = () => {
 // Начало изменения размера
 const startResize = (event) => {
   isResizing.value = true;
-  // Блокируем выделение других узлов графа
   useFocusStore().setIsDragging(true);
-  // Сохраняем начальные данные
   resizeStart.value = {
     x: event.clientX,
     y: event.clientY,
     width: size.value.width,
     height: size.value.height,
   };
-  // Добавляем обработчики событий для изменения размера
   window.addEventListener("mousemove", handleResize);
   window.addEventListener("mouseup", stopResize);
 };
 // Обработка изменения размера
 const handleResize = (event) => {
   if (isResizing.value) {
-    // Вычисляем разницу между текущей позицией мыши и начальной позицией
     const deltaX = event.clientX - resizeStart.value.x;
     const deltaY = event.clientY - resizeStart.value.y;
-    // Обновляем размеры компонента
     size.value = {
-      width: Math.max(200, resizeStart.value.width + deltaX), // Минимальная ширина 200px
-      height: Math.max(200, resizeStart.value.height + deltaY), // Минимальная высота 200px
+      width: Math.max(200, resizeStart.value.width + deltaX),
+      height: Math.max(200, resizeStart.value.height + deltaY),
     };
-    // Сохраняем размеры в хранилище
     useFocusStore().setFilePreviewSize(size.value);
   }
 };
 // Остановка изменения размера
 const stopResize = () => {
   isResizing.value = false;
-  // Разблокируем выделение узлов графа
   useFocusStore().setIsDragging(false);
   window.removeEventListener("mousemove", handleResize);
   window.removeEventListener("mouseup", stopResize);
 };
-// Загрузка медиафайла
-const loadMedia = async (fileName) => {
-  try {
-    const response = await fetch(fileUrl(fileName));
-    if (!response.ok) throw new Error("Ошибка загрузки медиафайла");
-    // Генерируем уникальный URL для медиафайла
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    // Сохраняем URL в соответствующий кэш
-    if (isPdf.value) {
-      cacheStore.addToCache("pdfCache", fileName, url);
-    } else if (isAudio.value) {
-      cacheStore.addToCache("audioCache", fileName, url);
-    } else if (isVideo.value) {
-      cacheStore.addToCache("videoCache", fileName, url);
-    }
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
+const handleMouseDown = (event) => {
+  // Проверяем, нажата ли левая кнопка мыши
+  if (event.button === 0) {
+    startDrag(event);
   }
 };
-// URL для просмотра PDF
-const pdfViewerUrl = computed(() => {
-  if (!currentFileNode.value?.name || !isPdf.value) return "";
-  const fileName = currentFileNode.value.name;
-  return getViewerUrl("pdfCache", fileName, "PDF");
-});
-// URL для просмотра изображения
-const imageViewerUrl = computed(() => {
-  if (!currentFileNode.value?.name || !isImage.value) return "";
-  const fileName = currentFileNode.value.name;
-  return getViewerUrl("imageCache", fileName, "Изображение");
-});
-// URL для просмотра аудио
-const audioViewerUrl = computed(() => {
-  if (!currentFileNode.value?.name || !isAudio.value) return "";
-  const fileName = currentFileNode.value.name;
-  return getViewerUrl("audioCache", fileName, "Аудио");
-});
-// URL для просмотра видео
-const videoViewerUrl = computed(() => {
-  if (!currentFileNode.value?.name || !isVideo.value) return "";
-  const fileName = currentFileNode.value.name;
-  return getViewerUrl("videoCache", fileName, "Видео");
-});
-// Универсальная функция для получения URL
-const getViewerUrl = (cacheName, fileName, fileType) => {
-  // Проверяем, есть ли файл в кэше
-  if (cacheStore.hasInCache(cacheName, fileName)) {
-    return cacheStore.getFromCache(cacheName, fileName); // Возвращаем закэшированный URL
-  }
-  // Если файла нет в кэше, генерируем новый URL
-  const url = `http://localhost:3000${fileUrl(fileName)}`;
-  cacheStore.addToCache(cacheName, fileName, url); // Сохраняем URL в кэш
-  return url;
-};
-// Отслеживаем изменения currentFileNode
 watch(
-  () => currentFileNode.value,
-  (newNode) => {
-    if (newNode?.name) {
-      loading.value = true;
-      error.value = null; // Очищаем ошибку
-      // Проверяем, есть ли файл в соответствующем кэше
-      if (
-        (isPdf.value && cacheStore.hasInCache("pdfCache", newNode.name)) ||
-        (isAudio.value && cacheStore.hasInCache("audioCache", newNode.name)) ||
-        (isVideo.value && cacheStore.hasInCache("videoCache", newNode.name)) ||
-        (isTextFile.value && cacheStore.hasInCache("textCache", newNode.name)) ||
-        (isImage.value && cacheStore.hasInCache("imageCache", newNode.name))
-      ) {
-        loading.value = false;
-        return;
-      }
-      // Если файла нет в кэше, загружаем его
-      if (isTextFile.value) {
-        loadTextFile(newNode.name);
-      } else if (isImage.value) {
-        // Для изображений не требуется дополнительная загрузка, так как используется URL
-        loading.value = false;
-      } else {
-        loadMedia(newNode.name);
-      }
+  () => fileName.value,
+  async (newFileName) => {
+    if (!newFileName) return;
+    // Определяем тип файла
+    const isPdf = newFileName.endsWith('.pdf');
+    const isImage = /\.(png|jpe?g|gif|svg)$/i.test(newFileName);
+    const isAudio = /\.(mp3|wav|ogg)$/i.test(newFileName);
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(newFileName);
+    // Очищаем старые URL
+    viewerUrls.value = {
+      pdf: '',
+      image: '',
+      audio: '',
+      video: '',
+    };
+    // Загружаем нужные по типу
+    if (isPdf) {
+      viewerUrls.value.pdf = await getViewerUrl('pdfCache', newFileName);
+    }
+    if (isImage) {
+      viewerUrls.value.image = await getViewerUrl('imageCache', newFileName);
+    }
+    if (isAudio) {
+      viewerUrls.value.audio = await getViewerUrl('audioCache', newFileName);
+    }
+    if (isVideo) {
+      viewerUrls.value.video = await getViewerUrl('videoCache', newFileName);
     }
   },
-  { immediate: true } // Запускаем обработчик сразу после монтирования
+  { immediate: true }
 );
 </script>
 <style scoped>
@@ -313,67 +289,61 @@ watch(
 }
 .file-preview:active {
   cursor: grabbing;
+  transition: all 0.1s ease-out;
 }
 .loading {
-  text-align: center;
-  font-style: italic;
-  color: #666;
-}
-.error {
-  color: red;
-  text-align: center;
-}
-.preview-content {
-  overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  height: 100%;
+  font-weight: bold;
+  color: #333;
 }
-.preview-content img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.preview-content * {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top;
-}
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow: auto;
-  max-height: 300px;
+.error {
+  color: red;
+  font-weight: bold;
 }
 .pdf-viewer {
   width: 100%;
   height: 100%;
-}
-.unsupported {
-  text-align: center;
-  color: #888;
+  border: none;
 }
 .resize-handle {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 16px;
-  height: 16px;
-  background-color: #ccc;
-  cursor: nwse-resize;
+  width: 10px;
+  height: 10px;
+  background: #ccc;
+  cursor: se-resize;
+  z-index: 2;
 }
-/* Прозрачный слой */
-.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: transparent; /* Полностью прозрачный фон */
-  z-index: 10; /* Чтобы быть поверх содержимого */
-  cursor: grab;
+.textContent{
+  overflow-y: auto;
+  max-height: 100%;
 }
+/* Только для Firefox */
+.textContent {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+}
+.preview-content {
+  width: 100%;         /* занимает всю ширину родителя */
+  height: 100%;        /* занимает всю высоту родителя */
+  overflow: hidden;    /* обрезаем всё, что выходит за рамки */
+  display: flex;
+  align-items: center; /* вертикальное центрирование */
+  justify-content: center; /* горизонтальное центрирование */
+  position: relative;
+  background-color: #f0f0f0;
+}
+.preview-content img,
+.preview-content video,
+.preview-content audio {
+  max-width: 100%;     /* не больше ширины контейнера */
+  max-height: 100%;    /* не больше высоты контейнера */
+  width: auto;
+  height: auto;
+  object-fit: contain; /* сохраняет пропорции и помещается полностью */
+}
+
 </style>

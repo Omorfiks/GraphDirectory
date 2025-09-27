@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue';
 // Инициализация состояний
 export const useGraphInteractions = () => {
+  // // Состояния для узлов и рёбер
+  const nodes = ref([]);
   const width = ref(window.innerWidth);
   const height = ref(window.innerHeight);
   // Смещение графа
@@ -58,6 +60,7 @@ export const useGraphInteractions = () => {
     isDraggingForMove.value = false;
   };
   return {
+    nodes,
     width,
     height,
     offset,

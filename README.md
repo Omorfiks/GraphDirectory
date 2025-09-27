@@ -27,3 +27,14 @@ npm run dev
 ```sh
 npm run build
 ```
+
+### Запуск сервера:
+```sh
+node ./server.js
+```
+
+### Запуск клиента:
+```sh
+cd GraphDirectory
+npm run dev
+```

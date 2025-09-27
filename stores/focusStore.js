@@ -1,6 +1,10 @@
 import { defineStore } from "pinia";
 export const useFocusStore = defineStore("focus", {
   state: () => ({
+    isNodeFocused: false,
+    editingNode: null,
+    isEditingNode: null,
+    hoveredNode: null, // Реактивное состояние для ID наведенного узла
     filePreviewPosition: { x: 800, y: 100 }, // Начальная позиция
     filePreviewSize: { width: 600, height: 400 }, // Начальные размеры
     timerStartTime: null, // Время начала таймера
@@ -126,6 +130,7 @@ export const useFocusStore = defineStore("focus", {
      */
     setFocusedNode(id) {
       this.focusedNode = id+1;
+      this.isNodeFocused = this.focusedNode !== null;
     },
     /**
      * Сбрасывает фокус (убирает выделение).
@@ -394,6 +399,22 @@ export const useFocusStore = defineStore("focus", {
     // Установка размеров
     setFilePreviewSize(size) {
       this.filePreviewSize = size;
+    },
+    setFocusedNode(id) {
+      this.focusedNode = id+1;
+    },
+    setHoveredNode(id) {
+      this.hoveredNode = id;
+    },
+    clearFocus() {
+      this.focusedNode = null;
+      this.hoveredNode = null;
+    },
+    setEditingNode(id) {
+      this.editingNode = id;
+    },
+    clearEditingNode() {
+      this.editingNode = null;
     },
   },
 });

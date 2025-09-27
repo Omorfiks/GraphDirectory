@@ -26,7 +26,6 @@
 <script setup>
 import { ref, computed } from "vue";
 import TreeNode from "./TreeNode.vue";
-import axios from "axios";
 import AddFileForm from "../other/AddFileForm.vue"; // Импортируем новый компонент
 import { useFocusStore } from "../../../../stores/focusStore";
 // Данные дерева из хранилища
@@ -39,6 +38,33 @@ const position = ref({ top: 10, left: 10 });
 const isDragging = ref(false);
 // Позиция курсора при начале перетаскивания
 const dragStart = ref({ x: 0, y: 0 });
+// Начало перетаскивания
+const startDrag = (event) => {
+  isDragging.value = true;
+  dragStart.value = {
+    x: event.clientX - position.value.left,
+    y: event.clientY - position.value.top,
+  };
+  // Добавляем слушатели событий на документ
+  document.addEventListener("mousemove", handleDrag);
+  document.addEventListener("mouseup", stopDrag);
+};
+// Обработка перетаскивания
+const handleDrag = (event) => {
+  if (isDragging.value) {
+    position.value = {
+      top: event.clientY - dragStart.value.y,
+      left: event.clientX - dragStart.value.x,
+    };
+  }
+};
+// Остановка перетаскивания
+const stopDrag = () => {
+  isDragging.value = false;
+  // Удаляем слушатели событий с документа
+  document.removeEventListener("mousemove", handleDrag);
+  document.removeEventListener("mouseup", stopDrag);
+};
 // // Функция для загрузки данных с сервера
 // const fetchData = async () => {
 //   try {
@@ -67,33 +93,6 @@ const dragStart = ref({ x: 0, y: 0 });
 //     }, 2000);
 //   }
 // };
-// Начало перетаскивания
-const startDrag = (event) => {
-  isDragging.value = true;
-  dragStart.value = {
-    x: event.clientX - position.value.left,
-    y: event.clientY - position.value.top,
-  };
-  // Добавляем слушатели событий на документ
-  document.addEventListener("mousemove", handleDrag);
-  document.addEventListener("mouseup", stopDrag);
-};
-// Обработка перетаскивания
-const handleDrag = (event) => {
-  if (isDragging.value) {
-    position.value = {
-      top: event.clientY - dragStart.value.y,
-      left: event.clientX - dragStart.value.x,
-    };
-  }
-};
-// Остановка перетаскивания
-const stopDrag = () => {
-  isDragging.value = false;
-  // Удаляем слушатели событий с документа
-  document.removeEventListener("mousemove", handleDrag);
-  document.removeEventListener("mouseup", stopDrag);
-};
 </script>
 <style scoped>
 .file-tree {
@@ -107,6 +106,7 @@ const stopDrag = () => {
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   cursor: grab; /* Курсор для захвата */
+  transition: all 0.1s ease-out;
 }
 .file-tree:active {
   cursor: grabbing; /* Курсор при перетаскивании */

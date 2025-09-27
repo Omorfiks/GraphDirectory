@@ -6,7 +6,6 @@
   @mousemove="handleMouseMove"
   @mouseup="handleMouseUp"
   @mouseleave="handleMouseUp">
-    <ArrowLeft :visibleNodes="useFocusStore().treeData"/>
     <svg
       :width="width"
       :height="height"
@@ -17,12 +16,12 @@
     >
       <!-- Точка transformOrigin -->
        <!-- ДЛЯ ОТЛАДКИ -->
-      <circle
+      <!-- <circle
         :cx="centerX"
         :cy="centerY"
         r="5"
         fill="red"
-      />
+      /> -->
       <!-- Рёбра -->
       <line
         v-for="(edge, index) in visibleEdges"
@@ -42,7 +41,16 @@
         @mouseenter="highlightNode(node.id)"
         @mouseleave="clearFocus"
         @contextmenu.prevent="showContextMenu($event, node.name)"
+        @dblclick="toggleEdit(node.id+1)"
       >
+        <!-- Контур (обводка) -->
+        <circle
+          v-if="isEditing(node.id)"
+          r="25"
+          fill="none"
+          stroke="green"
+          stroke-width="4"
+        />
         <!-- Основной круг -->
         <circle r="20" :fill="'#007bff00'" />
       
@@ -73,7 +81,7 @@
       class="icon-overlay"
       :class="[
         fileIconClass(position.ext),
-        hoveredNode === position.node.id ? 'hovered' : ''
+        focusStore.hoveredNode === position.node.id ? 'hovered' : ''
       ]"
       :style="{
         left: `${position.x * scale + offset.x}px`,
@@ -88,29 +96,33 @@
       @contextmenu.prevent="showContextMenu($event, position.node.name)"
     >
     </div>
-    <ArrowRight :visibleNodes="useFocusStore().treeData"/>
+    <ArrowS/>
   </div>
-      <!-- Компонент управления узлами -->
-      <NodeManager
-      v-if="isMenuVisible"
-      :currentNodeId="contextMenuNodeId"
-      :showMenu="isMenuVisible"
-      :menuPosition="menuPosition"
-      @closeMenu="closeContextMenu"
+  <Transition name="bounce">
+    <!-- Компонент управления узлами -->
+    <NodeManager
+    v-if="isMenuVisible"
+    :currentNodeId="contextMenuNodeId"
+    :showMenu="isMenuVisible"
+    :menuPosition="menuPosition"
+    @closeMenu="closeContextMenu"
+    style="text-align: center;"
     />
+</Transition>
 </template>
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, onBeforeMount } from "vue";
 import { useFocusStore } from "../../../../../stores/focusStore";
 import { useCacheStore } from "../../../../../stores/cacheStore";
 import { useIconStore } from "../../../../../stores/iconStore";
 import NodeManager from "../NodeManager.vue"; // Импортируем компонент
 import APIfunctions from "../../services/APIfunctions";
-import ArrowLeft from "../../Center/ArrowLeft.vue";
-import ArrowRight from "../../Center/ArrowsRight.vue";
+import ArrowS from "../ArrowS.vue";
 import { useGraphInteractions } from './graphScaleAndMove'; // Импортируем логику
 import { useIconHandler } from './iconHandler';
 const {
+  nodes,
+  width,
   height,
   offset,
   scale,
@@ -128,20 +140,21 @@ const {
   fileIconClass, 
   visibleNodesResult 
 } = useIconHandler();
-// Реактивное состояние для ID наведенного узла
-const hoveredNode = ref(null);
+// Уведомляем родителя о начале загрузки
+const emit = defineEmits(["loading-start", "loading-complete"]);
 // Состояние для контекстного меню
 const isMenuVisible = ref(false);
 const contextMenuNodeId = ref(null);
 const menuPosition = ref({ x: 0, y: 0 });
-// // Размеры SVG
-const width = ref(window.innerWidth);
-// // Состояния для узлов и рёбер
-const nodes = ref([]);
 const edges = ref([]);
 const focusStore = useFocusStore();
 // Вычисляемое свойство для проверки флага isDragging
 const isDragging = computed(() => focusStore.isDragging);
+// Слушаем изменения размера окна
+window.addEventListener("resize", () => {
+  width.value = window.innerWidth;
+  height.value = window.innerHeight;
+});
 // Вычисляемый массив позиций вершин
 const nodePositions = computed(() => {
   return visibleNodes.value.map((node) => {
@@ -151,7 +164,7 @@ const nodePositions = computed(() => {
       : null;
     return {
       x: node.x - 20, // Корректировка по оси X
-      y: node.y + (height.value / 2 - 375), // Корректировка по оси Y
+      y: node.y - 20, // Корректировка по оси Y
       node: node, // Сам узел
       ext: extension, // Расширение файла (если есть)
     };
@@ -176,10 +189,10 @@ const visibleEdges = computed(() => {
 });
 // Функции для обработки событий mouseenter и mouseleave
 const handleMouseEnter = (nodeId) => {
-  hoveredNode.value = nodeId; // Устанавливаем ID наведенного узла
+  focusStore.hoveredNode = nodeId; // Устанавливаем ID наведенного узла
 };
 const handleMouseLeave = () => {
-  hoveredNode.value = null; // Сбрасываем ID при уходе курсора
+  focusStore.hoveredNode = null; // Сбрасываем ID при уходе курсора
 };
 // // Показать контекстное меню
 const showContextMenu = (event, nodeName) => {
@@ -276,7 +289,7 @@ const recalculateNodePositions = () => {
   });
 };
 const isSupportedFileType = (fileName) => {
-  const supportedExtensions = [".jpg", ".mp3", ".mp4", ".pdf", ".txt"];
+  const supportedExtensions = [".jpg", ".mp3", ".mp4", ".pdf", ".txt", ".html", ".css", ".js", ".vue"];
   return supportedExtensions.some((ext) => fileName.endsWith(ext));
 };
 // // Выделение узла при наведении
@@ -311,6 +324,9 @@ const getSubtreeNodes = (nodeId) => {
   });
   return result;
 };
+onBeforeMount(() => {
+  emit("loading-start"); // Уведомляем родителя о начале загрузки
+});
 onMounted(async () => {
   adjustOffsetToCenter(); // Перемещаем центр графа на красную точку
   focusStore.setTimerStartTime(); // Запускаем таймер
@@ -332,9 +348,16 @@ onMounted(async () => {
     const elapsedTime = endTime - startTime; // Разница во времени
     console.log(`Монтирование компонента заняло ${elapsedTime} мс`);
   }
+  try {
   // Загрузка данных темы
   await useIconStore().fetchThemeFile();
   await loadFileIcon(visibleNodesResult.value);
+
+} catch (error) {
+    console.error("Ошибка при загрузке данных:", error);
+  } finally {
+    emit("loading-complete"); // Уведомляем родителя о завершении загрузки
+  }
 });
 // Слежение за изменениями visibleNodes
 watch(
@@ -344,12 +367,24 @@ watch(
   },
   { immediate: true } // Немедленно вызываем callback при монтировании компонента
 );
+// Проверка, является ли узел редактируемым
+const isEditing = (nodeId) => {
+  return nodeId === focusStore.editingNode-1;
+};
+// Обработка двойного клика
+const toggleEdit = (nodeId) => {
+  if (nodeId !== focusStore.focusedNode) {
+    focusStore.setFocusedNode(nodeId);
+  }
+  focusStore.setEditingNode(nodeId);
+};
 </script>
 <style scoped>
 .icon-overlay.hovered {
   text-shadow:
     0 0 15px rgba(0, 0, 0, 0.8), /* Ближний слой */
     0 0 10px rgba(0, 0, 0, 0.5); /* Дальний слой */
+    transition: all 0.2s ease;
 }
 .icon_folder::before {
   content: "\E032";
@@ -418,5 +453,22 @@ svg {
 }
 .right-arrow {
   right: 10px;
+}
+.bounce-enter-active {
+  animation: bounce-in 0.2s;
+}
+.bounce-leave-active {
+  animation: bounce-in 0.2s reverse;
+}
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 </style>
