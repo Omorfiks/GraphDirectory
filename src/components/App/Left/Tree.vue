@@ -1,17 +1,33 @@
 <template>
   <div
     class="file-tree"
-    :style="{ top: position.top + 'px', left: position.left + 'px' }"
+    :style="{ 
+      top: position.top + 'px', 
+      left: position.left + 'px'}"
     @mousedown="startDrag"
+    id="TreeBody"
   >
     <!-- Уведомление -->
     <div v-if="notification" class="notification">
       {{ notification }}
     </div>
-    <AddFileForm v-if="!useFocusStore().isLoading && treeData"/>
-    <h3>Файловая система</h3>
-    <button @click="updateJson">Обновить JSON</button>
-    <ul v-if="!useFocusStore().isLoading && treeData">
+    <AddFileForm v-if="!useFocusStore().isLoading && treeData" 
+    :style="{ overflow: 'hidden' }"/>
+    <div @click="updateJson" role="button" :style="{ overflow: 'hidden',
+      whiteSpace: 'nowrap' }">
+      <div :style="{ 
+        overflow: 'hidden', 
+        textOverflow: 'ellipsis', 
+        width: '100%', 
+        textAlign: 'center',
+        boxSizing: 'border-box'}">
+        Обновить JSON
+      </div>
+    </div>
+    <h3 :style="{ overflow: 'hidden',
+      whiteSpace: 'nowrap' }">Файловая система</h3>
+    <ul v-if="!useFocusStore().isLoading && treeData" :style="{ overflow: 'hidden',
+      whiteSpace: 'nowrap' }">
       <TreeNode
         v-for="(node, index) in treeData"
         :key="index"
@@ -21,10 +37,23 @@
       />
     </ul>
     <p v-else>Загрузка данных...</p>
+    <div class="file-tree codicon codicon-arrow-left" 
+    @click="hideFunc"
+    :style="{ 
+      display: 'grid',
+      alignContent: 'center',
+      padding: '1px',
+      marginTop:'-10px',
+      marginLeft:'271px',
+      width: '40px',
+      height: '60px',}"
+    id="TreeArrow"
+    >
+    </div>
   </div>
 </template>
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import TreeNode from "./TreeNode.vue";
 import AddFileForm from "../other/AddFileForm.vue"; // Импортируем новый компонент
 import { useFocusStore } from "../../../../stores/focusStore";
@@ -65,6 +94,27 @@ const stopDrag = () => {
   document.removeEventListener("mousemove", handleDrag);
   document.removeEventListener("mouseup", stopDrag);
 };
+const hideFunc = () => {
+    document.getElementById("TreeArrow").style.marginLeft = 0
+  if (document.getElementById("TreeArrow").className == 
+      "file-tree codicon codicon-arrow-right") {
+    document.getElementById("TreeBody").style.width = 
+      "250px";
+    document.getElementById("TreeArrow").style.left = 
+      "281px";
+    document.getElementById("TreeArrow").className = 
+      "file-tree codicon codicon-arrow-left";
+  } else {
+    document.getElementById("TreeBody").style.width = 
+      "0px";
+    document.getElementById("TreeArrow").style.left = 
+      "31px";
+    document.getElementById("TreeArrow").className = 
+      "file-tree codicon codicon-arrow-right";
+  }
+};
+onMounted(async () => {
+});
 // // Функция для загрузки данных с сервера
 // const fetchData = async () => {
 //   try {
@@ -118,21 +168,21 @@ h3 {
 }
 ul {
   list-style-type: none;
-  padding: 0;
+  padding: 3px;
   margin: 0;
 }
-button {
+div[role="button"] {
   margin-bottom: 1rem;
-  padding: 0.5rem 1rem;
-  background-color: #007bff;
+  margin: 1rem;
+  /* background-color: #007bff; */
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
-button:hover {
+/* div[role="button"]:hover {
   background-color: #0056b3;
-}
+} */
 p {
   color: #ccc;
 }

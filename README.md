@@ -30,6 +30,7 @@ npm run build
 
 ### Запуск сервера:
 ```sh
+cd GraphDirectory
 node ./server.js
 ```
 

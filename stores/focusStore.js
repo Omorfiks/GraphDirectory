@@ -5,7 +5,7 @@ export const useFocusStore = defineStore("focus", {
     editingNode: null,
     isEditingNode: null,
     hoveredNode: null, // Реактивное состояние для ID наведенного узла
-    filePreviewPosition: { x: 800, y: 100 }, // Начальная позиция
+    filePreviewPosition: { x: 1300, y: 10 }, // Начальная позиция
     filePreviewSize: { width: 600, height: 400 }, // Начальные размеры
     timerStartTime: null, // Время начала таймера
     isDragging: false,
