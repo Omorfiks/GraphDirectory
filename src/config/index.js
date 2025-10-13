@@ -1,0 +1,1 @@
+export const VITE_DEV_FRONT_URL = import.meta.env.MODE;

@@ -120,6 +120,9 @@ import APIfunctions from "../../services/APIfunctions";
 import ArrowS from "../ArrowS.vue";
 import { useGraphInteractions } from './graphScaleAndMove'; // Импортируем логику
 import { useIconHandler } from './iconHandler';
+import { VITE_DEV_FRONT_URL } from "@/config";
+console.log(VITE_DEV_FRONT_URL);
+
 const {
   nodes,
   width,
