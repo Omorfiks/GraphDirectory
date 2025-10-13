@@ -1,1 +1,1 @@
-export const VITE_DEV_FRONT_URL = import.meta.env.MODE;
+export const VITE_DEV_FRONT_URL = import.meta.env.VITE_DEV_FRONT_URL;
